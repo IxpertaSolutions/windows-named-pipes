@@ -1,0 +1,37 @@
+name:                   windows-named-pipes
+version:                0.1.0.0
+synopsis:               TODO
+-- description:         
+homepage:               TODO
+license:                BSD3
+license-file:           LICENSE
+author:                 Ixcom Core Team
+maintainer:             ixcom-core@ixperta.com
+copyright:              (c) 2016 Ixperta Solutions s.r.o.
+category:               System
+build-type:             Simple
+cabal-version:          >=1.10
+
+extra-source-files:     ChangeLog.md, README.md
+
+library
+  hs-source-dirs:       src
+  exposed-modules:
+      System.Win32.NamedPipes
+    , System.Win32.NamedPipes.Internal
+  -- other-modules:       
+
+  default-language:     Haskell2010
+  other-extensions:
+      DeriveGeneric
+    , ForeignFunctionInterface
+    , LambdaCase
+    , NoImplicitPrelude
+
+  build-depends:
+      base >=4.8 && <5
+    , Win32 ==2.3.*
+
+  build-tools:          hsc2hs
+
+  ghc-options:          -Wall
