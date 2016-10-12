@@ -1,23 +1,38 @@
 name:                   windows-named-pipes
 version:                0.1.0.0
-synopsis:               TODO
--- description:         
-homepage:               TODO
+synopsis:
+  Windows Named Pipes with streaming-commons-like interface.
+description:
+  Library contains both high-level and low-level APIs to Windows Named Pipes.
+  .
+  High-level API allows simple creation of both servers and clients. This API
+  uses conventions and style from @streaming-commons@ library.
+homepage:
+  https://github.com/IxpertaSolutions/windows-named-pipes
+bug-reports:
+  https://github.com/IxpertaSolutions/windows-named-pipes/issues
 license:                BSD3
 license-file:           LICENSE
 author:                 Ixcom Core Team
 maintainer:             ixcom-core@ixperta.com
 copyright:              (c) 2016 Ixperta Solutions s.r.o.
-category:               System
+category:               Data, System, Network
 build-type:             Simple
 cabal-version:          >=1.10
 
 extra-source-files:     ChangeLog.md, README.md
 
+flag pedantic
+  description:          Pass additional warning flags and -Werror to GHC.
+  default:              False
+  manual:               True
+
 library
   hs-source-dirs:       src
   exposed-modules:
-      System.Win32.NamedPipes
+      Data.Streaming.NamedPipes
+    , Data.Streaming.NamedPipes.Internal
+    , System.Win32.NamedPipes
     , System.Win32.NamedPipes.Internal
   -- other-modules:       
 
@@ -30,8 +45,17 @@ library
 
   build-depends:
       base >=4.8 && <5
+    , streaming-commons >=0.1.14 && <0.2
+    -- ^ Version 0.1.14 exports HasReadBufferSize type class.
     , Win32 ==2.3.*
 
   build-tools:          hsc2hs
 
-  ghc-options:          -Wall
+  ghc-options:
+    -Wall
+    -fwarn-implicit-prelude
+    -fwarn-missing-import-lists
+    -fwarn-tabs
+
+  if flag(pedantic)
+    ghc-options:        -Werror
