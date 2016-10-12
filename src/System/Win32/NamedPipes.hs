@@ -193,6 +193,10 @@ pipePathToFilePath = \case
 
 -- }}} PipePath ---------------------------------------------------------------
 
+-- {{{ Operations on Named Pipes ----------------------------------------------
+
+-- {{{ bindPipe ---------------------------------------------------------------
+
 data PipeMode = MessageMode | StreamMode
   deriving (Eq, Generic, Ord, Show, Read)
 
@@ -230,6 +234,10 @@ bindPipe bufSize mode name =
     -- Nothing means that default security descriptor will be used, and the
     -- PipeHandle cannot be inherited.
     securityAttrs = Nothing
+
+-- }}} bindPipe ---------------------------------------------------------------
+
+-- {{{ readPipe, writePipe ----------------------------------------------------
 
 -- | Open client side of a Named Pipe.
 getPipe :: PipePath -> IO PipeHandle
@@ -271,3 +279,5 @@ writePipe h bs = ByteString.unsafeUseAsCStringLen bs $ void . writePipe'
 
     -- Not using overlapped (asynchronous) I/O.
     overlapped = Nothing
+
+-- }}} readPipe, writePipe ----------------------------------------------------
