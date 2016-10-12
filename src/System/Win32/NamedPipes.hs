@@ -15,12 +15,13 @@
 module System.Win32.NamedPipes
   where
 
-import Prelude (error)
+import Prelude (error, fromIntegral)
 
 import Data.Bits ((.|.))
 import Data.Bool (not, otherwise)
 import Data.Eq (Eq((==)))
 import Data.Function (($), (.), on)
+import Data.Int (Int)
 import qualified Data.List as List (filter, null)
 import Data.Maybe (Maybe(Just, Nothing))
 import Data.Monoid ((<>))
@@ -140,8 +141,19 @@ pipePathToFilePath = \case
     format serverName (PipeName name) =
         "\\\\" <> serverName <> "\\pipe\\" <> name
 
-bindPipe :: PipeName -> IO PipeHandle
-bindPipe name =
+-- }}} PipePath ---------------------------------------------------------------
+
+data PipeMode = MessageMode | StreamMode
+  deriving (Eq, Generic, Ord, Show, Read)
+
+-- | Create Named Pipe, specified by its name relative to the current machine,
+-- and return its handle for further use.
+bindPipe
+    :: Int
+    -- ^ Input and output buffer size.
+    -> PipeName
+    -> IO PipeHandle
+bindPipe bufSize name =
     createNamedPipe strName openMode pipeMode maxInstances inBufSize outBufSize
         timeOut securityAttrs
   where
@@ -151,11 +163,16 @@ bindPipe name =
     pipeMode = pIPE_TYPE_MESSAGE .|. pIPE_READMODE_MESSAGE .|. pIPE_WAIT
     maxInstances = pIPE_UNLIMITED_INSTANCES
 
-    inBufSize = bufSize
-    outBufSize = bufSize
-    bufSize = 4096 -- TODO: Find a solid value.
+    inBufSize = bufSize'
+    outBufSize = bufSize'
+    bufSize' = fromIntegral bufSize
 
+    -- Zero means default value of 50 ms.
+    -- https://msdn.microsoft.com/en-us/library/windows/desktop/aa365150(v=vs.85).aspx
     timeOut = 0
+
+    -- Nothing means that default security descriptor will be used, and the
+    -- PipeHandle cannot be inherited.
     securityAttrs = Nothing
 
 getPipe :: PipePath -> IO PipeHandle
