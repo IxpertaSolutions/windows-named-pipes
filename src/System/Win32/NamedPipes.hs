@@ -29,8 +29,10 @@ import Data.Ord (Ord(compare))
 import Data.String (IsString(fromString), String)
 import GHC.Generics (Generic)
 import System.IO (FilePath, IO)
+import Text.Read (Read)
 import Text.Show (Show(showsPrec), showString)
 
+import Data.ByteString (ByteString)
 import Data.CaseInsensitive (CI)
 import qualified Data.CaseInsensitive as CI (mk)
 import System.Win32.Types (HANDLE)
@@ -38,7 +40,9 @@ import System.Win32.Types (HANDLE)
 import System.Win32.NamedPipes.Internal
     ( createNamedPipe
     , pIPE_ACCESS_DUPLEX
+    , pIPE_READMODE_BYTE
     , pIPE_READMODE_MESSAGE
+    , pIPE_TYPE_BYTE
     , pIPE_TYPE_MESSAGE
     , pIPE_UNLIMITED_INSTANCES
     , pIPE_WAIT
@@ -151,16 +155,22 @@ data PipeMode = MessageMode | StreamMode
 bindPipe
     :: Int
     -- ^ Input and output buffer size.
+    -> PipeMode
+    -- ^ Mode in which the pipe should be created.
     -> PipeName
     -> IO PipeHandle
-bindPipe bufSize name =
+bindPipe bufSize mode name =
     createNamedPipe strName openMode pipeMode maxInstances inBufSize outBufSize
         timeOut securityAttrs
   where
     strName = pipePathToFilePath $ LocalPipe name
 
     openMode = pIPE_ACCESS_DUPLEX
-    pipeMode = pIPE_TYPE_MESSAGE .|. pIPE_READMODE_MESSAGE .|. pIPE_WAIT
+
+    pipeMode = (pIPE_WAIT .|.) $ case mode of
+        MessageMode -> pIPE_TYPE_MESSAGE .|. pIPE_READMODE_MESSAGE
+        StreamMode -> pIPE_TYPE_BYTE .|. pIPE_READMODE_BYTE
+
     maxInstances = pIPE_UNLIMITED_INSTANCES
 
     inBufSize = bufSize'
