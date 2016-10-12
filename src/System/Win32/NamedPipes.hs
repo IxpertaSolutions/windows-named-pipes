@@ -106,7 +106,7 @@ instance Ord PipeName where
 -- \\\\%ServerName%\\pipe\\%PipeName%
 -- @
 --
--- 'LocalPath' is interpreted as:
+-- 'LocalPipe' is interpreted as:
 --
 -- @
 -- \\\\.\\pipe\\%PipeName%
@@ -115,6 +115,19 @@ data PipePath
     = LocalPipe PipeName
     | RemotePipe String PipeName
   deriving Generic
+
+-- | Smart constructor for 'PipePath'. It analyses server name, and based on
+-- its value it creates either 'LocalPipe' or 'RemotePipe'. The former
+-- ('LocalPipe') is created when server name is equal to @\".\"@.
+pipePath
+    :: String
+    -- ^ Server Name. WARNING: Currently we aren't checking validity of this
+    -- string.
+    -> PipeName
+    -- ^ Name of the pipe relative to Server Name.
+    -> PipePath
+pipePath "." = LocalPipe
+pipePath srv = RemotePipe srv
 
 -- | Utility function that simplifies implementation of 'Eq', and 'Ord'
 -- instances.
