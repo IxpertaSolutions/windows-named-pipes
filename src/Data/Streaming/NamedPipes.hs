@@ -13,7 +13,7 @@
 module Data.Streaming.NamedPipes
     (
     -- * Common
-    , AppDataPipe
+      AppDataPipe
     , defaultReadBufferSize
 
     -- * Server
@@ -31,15 +31,19 @@ module Data.Streaming.NamedPipes
     -- * Re-exported
     , appRead
     , appWrite
-    , getAfterBind
-    , setAfterBind
     , getReadBufferSize
     , setReadBufferSize
     )
   where
 
-import System.IO (FilePath, IO)
+import System.IO (IO)
 
+import Data.Streaming.Network
+    ( appRead
+    , appWrite
+    , getReadBufferSize
+    , setReadBufferSize
+    )
 import Data.Streaming.NamedPipes.Internal
     ( AppDataPipe
     , ClientSettingsPipe

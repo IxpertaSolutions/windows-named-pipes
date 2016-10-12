@@ -36,13 +36,17 @@ module Data.Streaming.NamedPipes.Internal
   where
 
 import Control.Applicative (pure)
-import Data.Function (const)
+import Data.Function (const, flip)
 import Data.Functor (Functor, fmap)
 import Data.Int (Int)
-import Data.Maybe (Maybe)
 import System.IO (IO)
 
 import Data.ByteString (ByteString)
+import Data.Streaming.Network
+    ( HasReadBufferSize(readBufferSizeLens)
+    , HasReadWrite(readLens, writeLens)
+    , getReadBufferSize
+    )
 
 import System.Win32.NamedPipes (PipeHandle, PipeName, PipePath)
 
@@ -63,7 +67,7 @@ data AppDataPipe = AppDataPipe
     , appRawPipe' :: PipeHandle
     }
 
-instance HasReadWrite AppData where
+instance HasReadWrite AppDataPipe where
     readLens f s@AppDataPipe{appReadPipe' = a} =
         f a <$$> \b -> s{appReadPipe' = b}
 
@@ -80,10 +84,10 @@ mkAppDataPipe cfg h = AppDataPipe
     }
   where
     read :: Int -> PipeHandle -> IO ByteString
-    read = bufferedRead     -- TODO
+    read = read     -- TODO
 
     write :: PipeHandle -> ByteString -> IO ()
-    write = bufferedWrite   -- TODO
+    write = write   -- TODO
 
     close :: PipeHandle -> IO ()
     close = close           -- TODO
@@ -108,12 +112,8 @@ instance HasPipeName ServerSettingsPipe where
     pipeNameLens f s@ServerSettingsPipe{serverPipeName = a} =
         f a <$$> \b -> s{serverPipeName = b}
 
-instance HasAfterBind ServerSettingsPipe where
-    serverAfterBindPipe f s@ServerSettingsPipe{serverAfterBindPipe = a} =
-        f a <$$> \b -> s{serverAfterBindPipe = b}
-
 instance HasReadBufferSize ServerSettingsPipe where
-    readBufferSizeLens f s@ServerSettingsPipe{serverReadBufferSizePipe = a}
+    readBufferSizeLens f s@ServerSettingsPipe{serverReadBufferSizePipe = a} =
         f a <$$> \b -> s{serverReadBufferSizePipe = b}
 
 -- | Smart constructor for 'ServerSettingsPipe'.
