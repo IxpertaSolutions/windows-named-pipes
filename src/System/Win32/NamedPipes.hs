@@ -13,6 +13,24 @@
 --
 -- Example Haskell module.
 module System.Win32.NamedPipes
+    (
+    -- * Handle
+      PipeHandle
+
+    -- * Named Pipe Path
+    , PipeName(..)
+    , pipeName
+
+    , PipePath(..)
+    , pipePath
+
+    -- * Operations on Named Pipes
+    , PipeMode(..)
+    , bindPipe
+    , getPipe
+    , readPipe
+    , writePipe
+    )
   where
 
 import Prelude (error, fromIntegral)
