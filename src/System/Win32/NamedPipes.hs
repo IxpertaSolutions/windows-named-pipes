@@ -210,3 +210,9 @@ bindPipe bufSize mode name =
 
 getPipe :: PipePath -> IO PipeHandle
 getPipe = getPipe
+
+readPipe :: Int -> PipeHandle -> IO ByteString
+readPipe = readPipe
+
+writePipe :: PipeHandle -> ByteString -> IO ()
+writePipe = writePipe
