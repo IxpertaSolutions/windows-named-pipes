@@ -99,9 +99,21 @@ instance Ord PipeName where
 
 -- {{{ PipePath ---------------------------------------------------------------
 
+-- | Represents path to a Named Pipe. Named pipes have special paths in the
+-- form:
+--
+-- @
+-- \\\\%ServerName%\\pipe\\%PipeName%
+-- @
+--
+-- 'LocalPath' is interpreted as:
+--
+-- @
+-- \\\\.\\pipe\\%PipeName%
+-- @
 data PipePath
     = LocalPipe PipeName
-    | RemotePath String PipeName
+    | RemotePipe String PipeName
   deriving Generic
 
 -- | Utility function that simplifies implementation of 'Eq', and 'Ord'
@@ -115,7 +127,7 @@ onCiPipePath = (`on` toCI)
   where
     toCI = \case
         LocalPipe (PipeName n) -> (Nothing, CI.mk n)
-        RemotePath srv (PipeName n) -> (Just $ CI.mk srv, CI.mk n)
+        RemotePipe srv (PipeName n) -> (Just $ CI.mk srv, CI.mk n)
 {-# INLINE onCiPipePath #-}
 
 instance Show PipePath where
@@ -129,8 +141,6 @@ instance Eq PipePath where
 instance Ord PipePath where
     compare = onCiPipePath compare
 
--- }}} PipePath ---------------------------------------------------------------
-
 -- | Convert 'PipePath' to a valid Windows 'FilePath' referencing a Named Pipe.
 -- Such paths are in form:
 --
@@ -140,7 +150,7 @@ instance Ord PipePath where
 pipePathToFilePath :: PipePath -> FilePath
 pipePathToFilePath = \case
     LocalPipe n -> format "." n
-    RemotePath srv n -> format srv n
+    RemotePipe srv n -> format srv n
   where
     format serverName (PipeName name) =
         "\\\\" <> serverName <> "\\pipe\\" <> name
