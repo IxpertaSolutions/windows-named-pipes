@@ -35,10 +35,12 @@ module System.Win32.NamedPipes
 
 import Prelude (error, fromIntegral)
 
+import Control.Monad (void)
 import Data.Bits ((.|.))
 import Data.Bool (not, otherwise)
 import Data.Eq (Eq((==)))
 import Data.Function (($), (.), on)
+import Data.Functor (fmap)
 import Data.Int (Int)
 import qualified Data.List as List (filter, null)
 import Data.Maybe (Maybe(Just, Nothing))
@@ -51,9 +53,12 @@ import Text.Read (Read)
 import Text.Show (Show(showsPrec), showString)
 
 import Data.ByteString (ByteString)
+import qualified Data.ByteString.Internal as ByteString (createAndTrim)
+import qualified Data.ByteString.Unsafe as ByteString (unsafeUseAsCStringLen)
 import Data.CaseInsensitive (CI)
 import qualified Data.CaseInsensitive as CI (mk)
-import System.Win32.Types (HANDLE)
+import System.Win32.Types (HANDLE, failIf)
+import System.Win32.File (win32_ReadFile, win32_WriteFile)
 
 import System.Win32.NamedPipes.Internal
     ( createNamedPipe
@@ -226,11 +231,43 @@ bindPipe bufSize mode name =
     -- PipeHandle cannot be inherited.
     securityAttrs = Nothing
 
+-- | Open client side of a Named Pipe.
 getPipe :: PipePath -> IO PipeHandle
 getPipe = getPipe
 
-readPipe :: Int -> PipeHandle -> IO ByteString
-readPipe = readPipe
+-- | Read data up to specified size from a Named Pipe.
+readPipe
+    :: Int
+    -- ^ Maximum number of bytes to read from a pipe.
+    -> PipeHandle
+    -> IO ByteString
+readPipe bufSize h =
+    ByteString.createAndTrim bufSize $ fmap fromIntegral . readPipe'
+  where
+    -- We are assuming that zero return value is an error, but that may not be
+    -- an error in case of overlapped I/O. We aren't using that, so we have cut
+    -- the corners here.
+    --
+    -- See MSDN documentation on details about Win32 ReadFile function:
+    -- https://msdn.microsoft.com/en-us/library/windows/desktop/aa365467(v=vs.85).aspx
+    readPipe' ptr = failIf (== 0) "readPipe"
+         $ win32_ReadFile h ptr (fromIntegral bufSize) overlapped
 
+    -- Not using overlapped (asynchronous) I/O.
+    overlapped = Nothing
+
+-- | Write data to a Named Pipe.
 writePipe :: PipeHandle -> ByteString -> IO ()
-writePipe = writePipe
+writePipe h bs = ByteString.unsafeUseAsCStringLen bs $ void . writePipe'
+  where
+    -- We are assuming that zero return value is an error, but that may not be
+    -- an error in case of overlapped I/O. We aren't using that, so we have cut
+    -- the corners here.
+    --
+    -- See MSDN documentation on details about Win32 WriteFile function:
+    -- https://msdn.microsoft.com/en-us/library/windows/desktop/aa365747(v=vs.85).aspx
+    writePipe' (ptr, len) = failIf (== 0) "writePipe"
+        $ win32_WriteFile h ptr (fromIntegral len) overlapped
+
+    -- Not using overlapped (asynchronous) I/O.
+    overlapped = Nothing
