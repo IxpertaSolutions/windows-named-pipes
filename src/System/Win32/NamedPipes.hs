@@ -30,6 +30,7 @@ module System.Win32.NamedPipes
     , getPipe
     , readPipe
     , writePipe
+    , closePipe
     )
   where
 
@@ -58,7 +59,17 @@ import qualified Data.ByteString.Unsafe as ByteString (unsafeUseAsCStringLen)
 import Data.CaseInsensitive (CI)
 import qualified Data.CaseInsensitive as CI (mk)
 import System.Win32.Types (HANDLE, failIf)
-import System.Win32.File (win32_ReadFile, win32_WriteFile)
+import System.Win32.File
+    ( closeHandle
+    , createFile
+    , fILE_SHARE_NONE
+    , gENERIC_READ
+    , gENERIC_WRITE
+    , oPEN_EXISTING
+    , sECURITY_ANONYMOUS
+    , win32_ReadFile
+    , win32_WriteFile
+    )
 
 import System.Win32.NamedPipes.Internal
     ( createNamedPipe
@@ -237,11 +248,34 @@ bindPipe bufSize mode name =
 
 -- }}} bindPipe ---------------------------------------------------------------
 
--- {{{ readPipe, writePipe ----------------------------------------------------
+-- {{{ getPipe, closePipe -----------------------------------------------------
 
--- | Open client side of a Named Pipe.
+-- | Open client side of a Named Pipe. Note that client can not choose the mode
+-- in which it will be communicating via the pipe ('pIPE_TYPE_BYTE', or
+-- 'pIPE_TYPE_MESSAGE'), that is up to the server.
 getPipe :: PipePath -> IO PipeHandle
-getPipe = getPipe
+getPipe path = createFile fileName accessMode shareMode securityAttrs
+    createMode fileAttrOrFlag templateFile
+  where
+    fileName = pipePathToFilePath path
+
+    -- Following values are based on Named Pipe Client example from MSDN:
+    -- https://msdn.microsoft.com/en-us/library/windows/desktop/aa365592(v=vs.85).aspx
+    accessMode = gENERIC_READ .|. gENERIC_WRITE
+    shareMode = fILE_SHARE_NONE
+    securityAttrs = Nothing
+    createMode = oPEN_EXISTING
+    fileAttrOrFlag = sECURITY_ANONYMOUS
+    templateFile = Nothing
+
+-- | Close a Named Pipe handle.
+closePipe :: PipeHandle -> IO ()
+closePipe = closeHandle
+{-# INLINE closePipe #-}
+
+-- {{{ getPipe, closePipe -----------------------------------------------------
+
+-- {{{ readPipe, writePipe ----------------------------------------------------
 
 -- | Read data up to specified size from a Named Pipe.
 readPipe
