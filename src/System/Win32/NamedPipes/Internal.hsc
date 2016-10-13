@@ -344,7 +344,10 @@ connectNamedPipe h =
 --     _Inout_opt_ LPOVERLAPPED lpOverlapped
 -- );
 -- @
-foreign import ccall unsafe "windows.h ConnectNamedPipe"
+--
+-- Since this is basically a wait\/sleep function, we need to use *safe*
+-- foreign call, because they delay the GC sync.
+foreign import ccall safe "windows.h ConnectNamedPipe"
     c_ConnectNamedPipe
         :: HANDLE
         -> LPOVERLAPPED
