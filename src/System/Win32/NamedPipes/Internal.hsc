@@ -16,6 +16,7 @@ module System.Win32.NamedPipes.Internal
     -- * Win32 Style Wrappers
       createNamedPipe
     , connectNamedPipe
+    , disconnectNamedPipe
 
     -- * Parameters
     , OutBufferSize
@@ -48,6 +49,7 @@ module System.Win32.NamedPipes.Internal
     -- * Low-level FFI Calls
     , c_CreateNamedPipe
     , c_ConnectNamedPipe
+    , c_DisconnectNamedPipe
     )
   where
 
@@ -67,6 +69,7 @@ import System.Win32.Types
     , HANDLE
     , LPCTSTR
     , failIf
+    , failIfFalse_
     , getLastError
     , iNVALID_HANDLE_VALUE
     , maybePtr
@@ -275,8 +278,6 @@ createNamedPipe name mode pipeMode max outSize inSize defTimeOut secAttrs =
 
     errMsg = "CreateNamedPipe " <> show name
 
--- }}} createNamedPipe --------------------------------------------------------
-
 -- | FFI call to @CreateNamedPipe@ function.
 --
 -- Creates an instance of a named pipe and returns a handle for subsequent pipe
@@ -310,6 +311,8 @@ foreign import ccall unsafe "windows.h CreateNamedPipe"
         -> LPSECURITY_ATTRIBUTES
         -> IO HANDLE
 
+-- }}} createNamedPipe --------------------------------------------------------
+
 -- {{{ connectNamedPipe -------------------------------------------------------
 
 -- | Enables a named pipe server process to wait for a client process to
@@ -330,7 +333,7 @@ connectNamedPipe h =
         then return r
         else (== #{const ERROR_PIPE_CONNECTED}) <$> getLastError
 
--- | FFI call to @ConnectNamedPipe@ function
+-- | FFI call to @ConnectNamedPipe@ function.
 --
 -- Enables a named pipe server process to wait for a client process to connect
 -- to an instance of a named pipe. A client process connects by calling either
@@ -354,3 +357,28 @@ foreign import ccall safe "windows.h ConnectNamedPipe"
         -> IO Bool
 
 -- }}} connectNamedPipe -------------------------------------------------------
+
+-- {{{ disconnectNamedPipe ----------------------------------------------------
+
+-- | Disconnects the server end of a named pipe instance from a client process.
+disconnectNamedPipe :: HANDLE -> IO ()
+disconnectNamedPipe =
+    failIfFalse_ "DisconnectNamedPipe" . c_DisconnectNamedPipe
+
+-- | FFI call to @DisconnectNamedPipe@ function.
+--
+-- Disconnects the server end of a named pipe instance from a client process.
+--
+-- <https://msdn.microsoft.com/en-us/library/windows/desktop/aa365166(v=vs.85).aspx>
+--
+-- @
+-- BOOL WINAPI DisconnectNamedPipe(
+--     _In_ HANDLE hNamedPipe
+-- );
+-- @
+foreign import ccall safe "windows.h DisconnectNamedPipe"
+    c_DisconnectNamedPipe
+        :: HANDLE
+        -> IO Bool
+
+-- {{{ disconnectNamedPipe ----------------------------------------------------
