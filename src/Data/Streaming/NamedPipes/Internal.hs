@@ -75,22 +75,25 @@ instance HasReadWrite AppDataPipe where
         f a <$$> \b -> s{appWritePipe' = b}
 
 -- | Smart constructor for 'AppDataPipe'.
-mkAppDataPipe :: HasReadBufferSize cfg => cfg -> PipeHandle -> AppDataPipe
-mkAppDataPipe cfg h = AppDataPipe
+mkAppDataPipe
+    :: HasReadBufferSize cfg
+    => cfg
+    -- ^ Server or client configuration.
+    -> (Int -> PipeHandle -> IO ByteString)
+    -- ^ Read data from a Named Pipe.
+    -> (PipeHandle -> ByteString -> IO ())
+    -- ^ Write data into a Named Pipe.
+    -> (PipeHandle -> IO ())
+    -- ^ Close a Named Pipe handle.
+    -> PipeHandle
+    -> AppDataPipe
+mkAppDataPipe cfg read write close h = AppDataPipe
     { appReadPipe' = read (getReadBufferSize cfg) h
     , appWritePipe' = write h
     , appClosePipe' = close h
     , appRawPipe' = h
     }
-  where
-    read :: Int -> PipeHandle -> IO ByteString
-    read = read     -- TODO
-
-    write :: PipeHandle -> ByteString -> IO ()
-    write = write   -- TODO
-
-    close :: PipeHandle -> IO ()
-    close = close           -- TODO
+{-# INLINE mkAppDataPipe #-}
 
 -- }}} AppDataPipe ------------------------------------------------------------
 
