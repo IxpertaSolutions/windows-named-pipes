@@ -53,6 +53,9 @@ import Data.Streaming.Network
 import Data.Streaming.NamedPipes.Internal
     ( AppDataPipe
     , ClientSettingsPipe
+        ( ClientSettingsPipe
+        , clientPipePath
+        )
     , HasPipeName(pipeNameLens)
     , HasPipePath(pipePathLens)
     , ServerSettingsPipe
@@ -73,6 +76,7 @@ import System.Win32.NamedPipes
     , closePipe
     , connectPipe
     , disconnectPipe
+    , getPipe
     , readPipe
     , writePipe
     )
@@ -135,5 +139,21 @@ runPipeServer cfg@ServerSettingsPipe{..} app = forever . withPipe $ \pipe -> do
     -- Multithreaded Pipe Server example from MSDN:
     -- https://msdn.microsoft.com/en-us/library/windows/desktop/aa365588(v=vs.85).aspx
 
+-- | Run a client application function by connecting to the specified server
+-- via Named Pipe. Client function is evaluated in current thread.
+--
+-- Example:
+--
+-- @
+-- 'runPipeClient' ('clientSettingsPipe' pipePath) $ \appData ->
+--     -- -->8-- Client code.
+-- @
 runPipeClient :: ClientSettingsPipe -> (AppDataPipe -> IO a) -> IO a
-runPipeClient = runPipeClient   -- TODO
+runPipeClient cfg@ClientSettingsPipe{..} app = withPipe $ app . mkAppData
+  where
+    withPipe = getPipe clientPipePath `bracket` closePipe
+    mkAppData = mkAppDataPipe cfg readPipe writePipe closePipe
+
+    -- Implementation of runPipeServer is inspired by streamings-common, and
+    -- Multithreaded Pipe Server example from MSDN:
+    -- https://msdn.microsoft.com/en-us/library/windows/desktop/aa365592(v=vs.85).aspx
