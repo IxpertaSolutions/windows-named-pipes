@@ -31,6 +31,7 @@ module System.Win32.NamedPipes
     , readPipe
     , writePipe
     , closePipe
+    , disconnectPipe
     )
   where
 
@@ -63,6 +64,7 @@ import System.Win32.File
     ( closeHandle
     , createFile
     , fILE_SHARE_NONE
+    , flushFileBuffers
     , gENERIC_READ
     , gENERIC_WRITE
     , oPEN_EXISTING
@@ -73,6 +75,7 @@ import System.Win32.File
 
 import System.Win32.NamedPipes.Internal
     ( createNamedPipe
+    , disconnectNamedPipe
     , pIPE_ACCESS_DUPLEX
     , pIPE_READMODE_BYTE
     , pIPE_READMODE_MESSAGE
@@ -248,7 +251,7 @@ bindPipe bufSize mode name =
 
 -- }}} bindPipe ---------------------------------------------------------------
 
--- {{{ getPipe, closePipe -----------------------------------------------------
+-- {{{ getPipe, closePipe, disconnectPipe -------------------------------------
 
 -- | Open client side of a Named Pipe. Note that client can not choose the mode
 -- in which it will be communicating via the pipe ('pIPE_TYPE_BYTE', or
@@ -273,7 +276,17 @@ closePipe :: PipeHandle -> IO ()
 closePipe = closeHandle
 {-# INLINE closePipe #-}
 
--- {{{ getPipe, closePipe -----------------------------------------------------
+-- | Disconnects the server end of a named pipe instance from a client process.
+--
+-- When the server process disconnects a pipe instance, any unread data in the
+-- pipe is discarded. Before calling low-level 'disconnectNamedPipe', this
+-- function calls 'flushFileBuffers' to prevent such data loss.
+disconnectPipe :: PipeHandle -> IO ()
+disconnectPipe pipe = do
+    flushFileBuffers pipe
+    disconnectNamedPipe pipe
+
+-- }}} getPipe, closePipe, disconnectPipe -------------------------------------
 
 -- {{{ readPipe, writePipe ----------------------------------------------------
 
