@@ -32,6 +32,7 @@ module System.Win32.NamedPipes
     , writePipe
     , closePipe
     , disconnectPipe
+    , connectPipe
     )
   where
 
@@ -39,7 +40,7 @@ import Prelude (error, fromIntegral)
 
 import Control.Monad (void)
 import Data.Bits ((.|.))
-import Data.Bool (not, otherwise)
+import Data.Bool (Bool, not, otherwise)
 import Data.Eq (Eq((==)))
 import Data.Function (($), (.), on)
 import Data.Functor (fmap)
@@ -74,7 +75,8 @@ import System.Win32.File
     )
 
 import System.Win32.NamedPipes.Internal
-    ( createNamedPipe
+    ( connectNamedPipe
+    , createNamedPipe
     , disconnectNamedPipe
     , pIPE_ACCESS_DUPLEX
     , pIPE_READMODE_BYTE
@@ -209,7 +211,7 @@ pipePathToFilePath = \case
 
 -- {{{ Operations on Named Pipes ----------------------------------------------
 
--- {{{ bindPipe ---------------------------------------------------------------
+-- {{{ bindPipe, connectPipe --------------------------------------------------
 
 data PipeMode = MessageMode | StreamMode
   deriving (Eq, Generic, Ord, Show, Read)
@@ -249,7 +251,14 @@ bindPipe bufSize mode name =
     -- PipeHandle cannot be inherited.
     securityAttrs = Nothing
 
--- }}} bindPipe ---------------------------------------------------------------
+-- | Enables a named pipe server process to wait for a client process to
+-- connect to an instance of a named pipe. A client process connects by calling
+-- the 'getPipe' function.
+connectPipe :: PipeHandle -> IO Bool
+connectPipe = connectNamedPipe
+{-# INLINE connectPipe #-}
+
+-- }}} bindPipe, connectPipe --------------------------------------------------
 
 -- {{{ getPipe, closePipe, disconnectPipe -------------------------------------
 
