@@ -18,15 +18,15 @@ module Data.Streaming.NamedPipes.Internal
 
     -- * ServerSettingsPipe
     , HasPipeName(..)
---  , getPipeName
---  , setPipeName
+    , getPipeName
+    , setPipeName
     , ServerSettingsPipe(..)
     , serverSettingsPipe
 
     -- * ClientSettingsPipe
     , HasPipePath(..)
---  , getPipePath
---  , setPipePath
+    , getPipePath
+    , setPipePath
     , ClientSettingsPipe(..)
     , clientSettingsPipe
 
@@ -35,9 +35,10 @@ module Data.Streaming.NamedPipes.Internal
     )
   where
 
-import Control.Applicative (pure)
-import Data.Function (const, flip)
+import Control.Applicative (Const(Const, getConst), pure)
+import Data.Function ((.), const, flip)
 import Data.Functor (Functor, fmap)
+import Data.Functor.Identity (Identity(Identity, runIdentity))
 import Data.Int (Int)
 import System.IO (IO)
 
@@ -104,6 +105,14 @@ mkAppDataPipe cfg read write close h = AppDataPipe
 class HasPipeName s where
     pipeNameLens :: Functor f => (PipeName -> f PipeName) -> s -> f s
 
+-- | Get Named Pipe name from server settings.
+getPipeName :: HasPipeName s => s -> PipeName
+getPipeName = getConst . pipeNameLens Const
+
+-- | Set Named Pipe name in server settings.
+setPipeName :: HasPipeName s => PipeName -> s -> s
+setPipeName n = runIdentity . pipeNameLens (const (Identity n))
+
 -- | Settings of a server that listens on a Windows Named Pipe.
 data ServerSettingsPipe = ServerSettingsPipe
     { serverPipeName :: !PipeName
@@ -140,6 +149,14 @@ serverSettingsPipe name = ServerSettingsPipe
 class HasPipePath s where
     -- | Lens for accessing 'PipePath' stored in some type @s@.
     pipePathLens :: Functor f => (PipePath -> f PipePath) -> s -> f s
+
+-- | Get Named Pipe path from client settings.
+getPipePath :: HasPipePath s => s -> PipePath
+getPipePath = getConst . pipePathLens Const
+
+-- | Set Named Pipe path in client settings.
+setPipePath :: HasPipePath s => PipePath -> s -> s
+setPipePath p = runIdentity . pipePathLens (const (Identity p))
 
 -- | Settings of a client that connects to a Windows Named Pipe.
 data ClientSettingsPipe = ClientSettingsPipe

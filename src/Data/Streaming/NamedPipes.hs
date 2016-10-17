@@ -19,12 +19,16 @@ module Data.Streaming.NamedPipes
 
     -- * Server
     , HasPipeName(pipeNameLens)
+    , getPipeName
+    , setPipeName
     , ServerSettingsPipe
     , serverSettingsPipe
     , runPipeServer
 
     -- * Client
     , HasPipePath(pipePathLens)
+    , getPipePath
+    , setPipePath
     , ClientSettingsPipe
     , clientSettingsPipe
     , runPipeClient
@@ -66,8 +70,12 @@ import Data.Streaming.NamedPipes.Internal
         )
     , clientSettingsPipe
     , defaultReadBufferSize
+    , getPipeName
+    , getPipePath
     , mkAppDataPipe
     , serverSettingsPipe
+    , setPipeName
+    , setPipePath
     )
 import System.Win32.NamedPipes
     ( PipeHandle
