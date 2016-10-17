@@ -299,7 +299,7 @@ createNamedPipe name mode pipeMode max outSize inSize defTimeOut secAttrs =
 --     _In_opt_ LPSECURITY_ATTRIBUTES lpSecurityAttributes
 -- );
 -- @
-foreign import ccall unsafe "windows.h CreateNamedPipe"
+foreign import ccall unsafe "windows.h CreateNamedPipeW"
     c_CreateNamedPipe
         :: LPCTSTR
         -> PipeOpenMode
