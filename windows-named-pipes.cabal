@@ -61,3 +61,63 @@ library
 
   if flag(pedantic)
     ghc-options:        -Werror
+
+test-suite unit-tests
+  hs-source-dirs:       src, test
+  type:                 exitcode-stdio-1.0
+  main-is:              unit-tests.hs
+
+  other-modules:
+    -- {{{ Unit Tests Modules -------------------------------------------------
+      TestCase
+
+    -- }}} Unit Tests Modules -------------------------------------------------
+    -- {{{ Other Modules ------------------------------------------------------
+
+    , Data.Streaming.NamedPipes
+    , Data.Streaming.NamedPipes.Internal
+    , System.Win32.NamedPipes
+    , System.Win32.NamedPipes.Internal
+
+    -- }}} Other Modules ------------------------------------------------------
+
+  default-language:     Haskell2010
+  other-extensions:
+      DeriveGeneric
+    , ForeignFunctionInterface
+    , LambdaCase
+    , NoImplicitPrelude
+
+  build-depends:
+    -- {{{ Library dependencies -----------------------------------------------
+      base >=4.8 && <5
+    , bytestring
+    , case-insensitive
+    , streaming-commons >=0.1.14 && <0.2
+    -- ^ Version 0.1.14 exports HasReadBufferSize type class.
+    , Win32 ==2.3.*
+
+    -- }}} Library dependencies -----------------------------------------------
+
+    -- {{{ Test-suite dependencies --------------------------------------------
+    , HUnit >=1.2 && <2
+    , QuickCheck >=2.4 && <2.9
+    -- ^ Same bounds as test-framework-quickcheck2 0.3.0.
+    , quickcheck-instances >=0.3.6 && <0.4
+    -- ^ 0.3.6 is the first version that has instances for unordered-containers
+    , test-framework >=0.8 && <1
+    , test-framework-hunit >=0.2.6
+    , test-framework-quickcheck2 >=0.3
+    -- }}} Test-suite dependencies --------------------------------------------
+
+  build-tools:          hsc2hs
+
+  ghc-options:
+    -Wall
+    -fwarn-implicit-prelude
+    -fwarn-missing-import-lists
+    -fwarn-tabs
+  cpp-options:          -DEXPORT_INTERNALS
+
+  if flag(pedantic)
+    ghc-options:        -Werror
