@@ -12,13 +12,13 @@
 module TestCase (tests)
   where
 
-import Test.Framework (Test{-, testGroup-})
+import Test.Framework (Test, testGroup)
 
---import qualified TestCase.Data.Streaming.NamedPipe
---  as Data.Streaming.NamedPipe (tests)
+import qualified TestCase.Data.Streaming.NamedPipes
+  as Data.Streaming.NamedPipes (tests)
 
 
 tests :: [Test]
-tests = []
---  [ testGroup "Data.Streaming.NamedPipe" Data.Streaming.NamedPipe.tests
---  ]
+tests =
+    [ testGroup "Data.Streaming.NamedPipes" Data.Streaming.NamedPipes.tests
+    ]

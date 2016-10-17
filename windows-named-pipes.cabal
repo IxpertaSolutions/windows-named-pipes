@@ -70,6 +70,7 @@ test-suite unit-tests
   other-modules:
     -- {{{ Unit Tests Modules -------------------------------------------------
       TestCase
+    , TestCase.Data.Streaming.NamedPipes
 
     -- }}} Unit Tests Modules -------------------------------------------------
     -- {{{ Other Modules ------------------------------------------------------
@@ -110,6 +111,12 @@ test-suite unit-tests
     , test-framework-quickcheck2 >=0.3
     -- }}} Test-suite dependencies --------------------------------------------
 
+    -- {{{ Test dependencies --------------------------------------------------
+
+    , async
+
+    -- }}} Test dependencies --------------------------------------------------
+
   build-tools:          hsc2hs
 
   ghc-options:
@@ -117,6 +124,7 @@ test-suite unit-tests
     -fwarn-implicit-prelude
     -fwarn-missing-import-lists
     -fwarn-tabs
+    -threaded
   cpp-options:          -DEXPORT_INTERNALS
 
   if flag(pedantic)
