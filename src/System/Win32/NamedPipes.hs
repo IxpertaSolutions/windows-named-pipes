@@ -40,7 +40,7 @@ import Prelude (error, fromIntegral)
 
 import Control.Monad (void)
 import Data.Bits ((.|.))
-import Data.Bool (Bool, not, otherwise)
+import Data.Bool (Bool, otherwise)
 import Data.Eq (Eq((==)))
 import Data.Function (($), (.), on)
 import Data.Functor (fmap)
@@ -107,7 +107,7 @@ pipeName str
   where
     -- MSDN documentation specifies that backslash is the only character that
     -- is the only invalid character in pipe name.
-    isValid = not . List.null $ List.filter (== '\\') str
+    isValid = List.null $ List.filter (== '\\') str
 
 -- | Utility function that simplifies implementation of 'Eq', and 'Ord'
 -- instances.
