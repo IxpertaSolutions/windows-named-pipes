@@ -103,6 +103,8 @@ mkAppDataPipe cfg read write close h = AppDataPipe
 -- | Type class for accessing 'PipeName' in a data type it's usually a type
 -- that represents server settings.
 class HasPipeName s where
+    -- | Lens for accessing Named Pipe name in a data type, usually server
+    -- settings.
     pipeNameLens :: Functor f => (PipeName -> f PipeName) -> s -> f s
 
 -- | Get Named Pipe name from server settings.
@@ -147,7 +149,8 @@ serverSettingsPipe name = ServerSettingsPipe
 -- | Type class for accessing 'PipePath' in a data type it's usually a type
 -- that represents client settings.
 class HasPipePath s where
-    -- | Lens for accessing 'PipePath' stored in some type @s@.
+    -- | Lens for accessing Named Pipe path in a data type, usually client
+    -- settings.
     pipePathLens :: Functor f => (PipePath -> f PipePath) -> s -> f s
 
 -- | Get Named Pipe path from client settings.
