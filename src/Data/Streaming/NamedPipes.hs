@@ -43,7 +43,7 @@ module Data.Streaming.NamedPipes
 
 import Control.Exception (bracket, finally, mask)
 import Control.Concurrent (forkIO)
-import Control.Monad (forever, void, when)
+import Control.Monad (forever, unless, void, when)
 import Data.Function (($), (.))
 import System.IO (IO)
 
@@ -140,8 +140,8 @@ runPipeServer cfg@ServerSettingsPipe{..} app = forever . withPipe $ \pipe -> do
     -- https://msdn.microsoft.com/en-us/library/windows/desktop/aa365166(v=vs.85).aspx
     closePipe' :: PipeHandle -> IO ()
     closePipe' pipe = do
-        disconnectPipe pipe
-        closePipe pipe
+        isHandleValid <- disconnectPipe pipe
+        unless isHandleValid $ void (closePipe pipe)
 
     -- Implementation of runPipeServer is inspired by streamings-common, and
     -- Multithreaded Pipe Server example from MSDN:
@@ -160,7 +160,7 @@ runPipeClient :: ClientSettingsPipe -> (AppDataPipe -> IO a) -> IO a
 runPipeClient cfg@ClientSettingsPipe{..} app = withPipe $ app . mkAppData
   where
     withPipe = getPipe clientPipePath `bracket` closePipe
-    mkAppData = mkAppDataPipe cfg readPipe writePipe closePipe
+    mkAppData = mkAppDataPipe cfg readPipe writePipe (void . closePipe)
 
     -- Implementation of runPipeServer is inspired by streamings-common, and
     -- Multithreaded Pipe Server example from MSDN:

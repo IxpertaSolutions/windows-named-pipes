@@ -38,7 +38,7 @@ module System.Win32.NamedPipes
 
 import Prelude (error, fromIntegral)
 
-import Control.Monad (void)
+import Control.Monad (return, unless, void)
 import Data.Bits ((.|.))
 import Data.Bool (Bool, otherwise)
 import Data.Eq (Eq((==)))
@@ -62,10 +62,8 @@ import Data.CaseInsensitive (CI)
 import qualified Data.CaseInsensitive as CI (mk)
 import System.Win32.Types (HANDLE, failIf)
 import System.Win32.File
-    ( closeHandle
-    , createFile
+    ( createFile
     , fILE_SHARE_NONE
-    , flushFileBuffers
     , gENERIC_READ
     , gENERIC_WRITE
     , oPEN_EXISTING
@@ -75,9 +73,11 @@ import System.Win32.File
     )
 
 import System.Win32.NamedPipes.Internal
-    ( connectNamedPipe
+    ( closeHandleCheckInvalidHandle
+    , connectNamedPipe
     , createNamedPipe
     , disconnectNamedPipe
+    , flushFileBuffersCheckInvalidHandle
     , pIPE_ACCESS_DUPLEX
     , pIPE_READMODE_BYTE
     , pIPE_READMODE_MESSAGE
@@ -281,8 +281,12 @@ getPipe path = createFile fileName accessMode shareMode securityAttrs
     templateFile = Nothing
 
 -- | Close a Named Pipe handle.
-closePipe :: PipeHandle -> IO ()
-closePipe = closeHandle
+--
+-- Function returns 'Data.Bool.False' when operation was successful, and
+-- 'Data.Bool.True' when @ERROR_INVALID_HANDLE@ was returned by underlying
+-- low-level call. This function enables us to ignore already closed handles.
+closePipe :: PipeHandle -> IO Bool
+closePipe = closeHandleCheckInvalidHandle
 {-# INLINE closePipe #-}
 
 -- | Disconnects the server end of a named pipe instance from a client process.
@@ -290,10 +294,15 @@ closePipe = closeHandle
 -- When the server process disconnects a pipe instance, any unread data in the
 -- pipe is discarded. Before calling low-level 'disconnectNamedPipe', this
 -- function calls 'flushFileBuffers' to prevent such data loss.
-disconnectPipe :: PipeHandle -> IO ()
+--
+-- Function returns 'Data.Bool.False' when operation was successful, and
+-- 'Data.Bool.True' when @ERROR_INVALID_HANDLE@ was returned by underlying
+-- low-level call. This function enables us to ignore already closed handles.
+disconnectPipe :: PipeHandle -> IO Bool
 disconnectPipe pipe = do
-    flushFileBuffers pipe
-    disconnectNamedPipe pipe
+    isInvalidHandle <- flushFileBuffersCheckInvalidHandle pipe
+    unless isInvalidHandle $ disconnectNamedPipe pipe
+    return isInvalidHandle
 
 -- }}} getPipe, closePipe, disconnectPipe -------------------------------------
 

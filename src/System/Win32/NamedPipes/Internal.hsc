@@ -46,6 +46,10 @@ module System.Win32.NamedPipes.Internal
     , pIPE_TYPE_MESSAGE
     , pIPE_WAIT
 
+    -- * Utility functions
+    , closeHandleCheckInvalidHandle
+    , flushFileBuffersCheckInvalidHandle
+
     -- * Low-level FFI Calls
     , c_CreateNamedPipe
     , c_ConnectNamedPipe
@@ -60,16 +64,23 @@ import Data.Function (($), (.))
 import Data.Functor ((<$>))
 import Data.Maybe (Maybe)
 import Data.Monoid ((<>))
+import Data.String (String)
 import System.IO (FilePath, IO)
 import Text.Show (show)
 
-import System.Win32.File (LPOVERLAPPED, LPSECURITY_ATTRIBUTES)
+import System.Win32.File
+    ( LPOVERLAPPED
+    , LPSECURITY_ATTRIBUTES
+    , c_CloseHandle
+    , c_FlushFileBuffers
+    )
 import System.Win32.Types
     ( DWORD
     , HANDLE
     , LPCTSTR
     , failIf
     , failIfFalse_
+    , failUnlessSuccessOr
     , getLastError
     , iNVALID_HANDLE_VALUE
     , maybePtr
@@ -382,3 +393,39 @@ foreign import ccall safe "windows.h DisconnectNamedPipe"
         -> IO Bool
 
 -- {{{ disconnectNamedPipe ----------------------------------------------------
+
+-- {{{ Utility Functions ------------------------------------------------------
+
+-- | Closes an open object handle.
+--
+-- Function returns 'Data.Bool.False' when operation was successful, and
+-- 'Data.Bool.True' when @ERROR_INVALID_HANDLE@ was returned by underlying
+-- low-level call. This function enables us to ignore already closed handles.
+closeHandleCheckInvalidHandle :: HANDLE -> IO Bool
+closeHandleCheckInvalidHandle h =
+    failUnlessSuccessOrInvalidHandle "CloseHandle" (c_CloseHandle h)
+
+-- | Flushes the buffers of a specified file and causes all buffered data to
+-- be written to a file.
+--
+-- Function returns 'Data.Bool.False' when operation was successful, and
+-- 'Data.Bool.True' when @ERROR_INVALID_HANDLE@ was returned by underlying
+-- low-level call. This function enables us to ignore already closed handles.
+flushFileBuffersCheckInvalidHandle :: HANDLE -> IO Bool
+flushFileBuffersCheckInvalidHandle h =
+    failUnlessSuccessOrInvalidHandle "FlushFileBuffers" (c_FlushFileBuffers h)
+
+-- | INTERNAL FUNCTION! DO NOT EXPORT!
+--
+-- Check that function either succeeded or if it failed due to
+-- @ERROR_INVALID_HANDLE@. This way we can avoid issues with non-idempotent
+-- disconnect\/close\/flush operations.
+failUnlessSuccessOrInvalidHandle :: String -> IO Bool -> IO Bool
+failUnlessSuccessOrInvalidHandle fnName f =
+    failUnlessSuccessOr #{const ERROR_INVALID_HANDLE} fnName $ do
+        r <- f
+        if r
+            then return #{const ERROR_SUCCESS}
+            else getLastError
+
+-- }}} Utility Functions ------------------------------------------------------
