@@ -41,7 +41,8 @@ module Data.Streaming.NamedPipes
     )
   where
 
-import Control.Exception (bracket, finally, mask)
+import Control.Applicative ((*>))
+import Control.Exception (bracket, finally, mask, onException)
 import Control.Concurrent (forkIO)
 import Control.Monad (forever, unless, void, when)
 import Data.Function (($), (.))
@@ -106,9 +107,16 @@ runPipeServer cfg@ServerSettingsPipe{..} app = forever . withPipe $ \pipe -> do
     when haveClient $ serve pipe
   where
     withPipe :: (PipeHandle -> IO ()) -> IO ()
-    withPipe k = bindPipe' `bracket` closePipe $ \pipe -> do
-        serverAfterBindPipe pipe
-        k pipe
+    withPipe k = do
+        pipe <- bindPipe'
+        (serverAfterBindPipe pipe *> k pipe) `onException` closePipe pipe
+            -- It is important to close pipe only when exception is detected,
+            -- otherwise we would close an active handle.
+            --
+            -- On this level we can use plain closePipe without disconnectPipe.
+            -- If we have detected that client is connected then we are
+            -- necessarily inside connection handling thread (see "serve"
+            -- function).
 
     -- | We are assuming that it is optimal to use same size of input/output
     -- buffer as the read size when calling readPipe.
