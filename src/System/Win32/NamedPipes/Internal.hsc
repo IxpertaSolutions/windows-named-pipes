@@ -1,3 +1,4 @@
+{-# LANGUAGE CPP #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 -- |
@@ -90,6 +91,26 @@ import System.Win32.Types
 
 #include <windows.h>
 
+
+-- {{{ Windows Calling Convention ---------------------------------------------
+--
+-- This was inspired by Win32 library.
+
+##if defined(i386_HOST_ARCH)
+
+##define WINDOWS_CCONV stdcall
+
+##elif defined(x86_64_HOST_ARCH)
+
+##define WINDOWS_CCONV ccall
+
+##else
+
+##error Unknown mingw32 arch.
+
+##endif
+
+-- }}} Windows Calling Convention ---------------------------------------------
 
 type OutBufferSize = DWORD
 type InBufferSize = DWORD
@@ -310,7 +331,7 @@ createNamedPipe name mode pipeMode max outSize inSize defTimeOut secAttrs =
 --     _In_opt_ LPSECURITY_ATTRIBUTES lpSecurityAttributes
 -- );
 -- @
-foreign import ccall unsafe "windows.h CreateNamedPipeW"
+foreign import WINDOWS_CCONV unsafe "windows.h CreateNamedPipeW"
     c_CreateNamedPipe
         :: LPCTSTR
         -> PipeOpenMode
@@ -361,7 +382,7 @@ connectNamedPipe h =
 --
 -- Since this is basically a wait\/sleep function, we need to use *safe*
 -- foreign call, because they delay the GC sync.
-foreign import ccall safe "windows.h ConnectNamedPipe"
+foreign import WINDOWS_CCONV safe "windows.h ConnectNamedPipe"
     c_ConnectNamedPipe
         :: HANDLE
         -> LPOVERLAPPED
@@ -387,7 +408,7 @@ disconnectNamedPipe =
 --     _In_ HANDLE hNamedPipe
 -- );
 -- @
-foreign import ccall safe "windows.h DisconnectNamedPipe"
+foreign import WINDOWS_CCONV safe "windows.h DisconnectNamedPipe"
     c_DisconnectNamedPipe
         :: HANDLE
         -> IO Bool
