@@ -66,6 +66,7 @@ import Data.Streaming.NamedPipes.Internal
     , ServerSettingsPipe
         ( ServerSettingsPipe
         , serverAfterBindPipe
+        , serverPipeMode
         , serverPipeName
         , serverReadBufferSizePipe
         )
@@ -80,7 +81,6 @@ import Data.Streaming.NamedPipes.Internal
     )
 import System.Win32.NamedPipes
     ( PipeHandle
-    , PipeMode(StreamMode)
     , bindPipe
     , closePipe
     , connectPipe
@@ -121,9 +121,7 @@ runPipeServer cfg@ServerSettingsPipe{..} app = forever . withPipe $ \pipe -> do
     -- | We are assuming that it is optimal to use same size of input/output
     -- buffer as the read size when calling readPipe.
     bindPipe' :: IO PipeHandle
-    bindPipe' = bindPipe serverReadBufferSizePipe StreamMode serverPipeName
-        -- TODO: Move the decision of using specific PipeMode in to
-        --       ServerSettingsPipe.
+    bindPipe' = bindPipe serverReadBufferSizePipe serverPipeMode serverPipeName
 
     -- We need to use closePipe' instead of closePipe, since AppDataPipe are
     -- living in "app", which means that client is connected to a Named Pipe.

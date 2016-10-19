@@ -49,7 +49,12 @@ import Data.Streaming.Network
     , getReadBufferSize
     )
 
-import System.Win32.NamedPipes (PipeHandle, PipeName, PipePath)
+import System.Win32.NamedPipes
+    ( PipeHandle
+    , PipeMode(MessageMode)
+    , PipeName
+    , PipePath
+    )
 
 
 -- | Currently set to 32 KiB, i.e. 32768 B. Same value is used by
@@ -120,6 +125,7 @@ data ServerSettingsPipe = ServerSettingsPipe
     { serverPipeName :: !PipeName
     , serverAfterBindPipe :: !(PipeHandle -> IO ())
     , serverReadBufferSizePipe :: !Int
+    , serverPipeMode :: !PipeMode
     }
 
 instance HasPipeName ServerSettingsPipe where
@@ -140,6 +146,7 @@ serverSettingsPipe name = ServerSettingsPipe
     { serverPipeName = name
     , serverAfterBindPipe = const (pure ())
     , serverReadBufferSizePipe = defaultReadBufferSize
+    , serverPipeMode = MessageMode
     }
 
 -- }}} ServerSettingsPipe -----------------------------------------------------
