@@ -1,5 +1,6 @@
 {-# LANGUAGE CPP #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
+{-# LANGUAGE InterruptibleFFI #-}
 {-# LANGUAGE NoImplicitPrelude #-}
 -- |
 -- Module:       $HEADER$
@@ -380,9 +381,12 @@ connectNamedPipe h =
 -- );
 -- @
 --
--- Since this is basically a wait\/sleep function, we need to use *safe*
--- foreign call, because they delay the GC sync.
-foreign import WINDOWS_CCONV safe "windows.h ConnectNamedPipe"
+-- Since this is basically a wait\/sleep function, we need to use *safe* and
+-- *interruptible* foreign call, because they delay the GC sync.
+--
+-- For more inofrmation about InterruptibleFFI see GHC documentation, e.g.:
+-- https://downloads.haskell.org/~ghc/8.0.1/docs/html/users_guide/ffi-chap.html#interruptible-foreign-calls
+foreign import WINDOWS_CCONV interruptible "windows.h ConnectNamedPipe"
     c_ConnectNamedPipe
         :: HANDLE
         -> LPOVERLAPPED
