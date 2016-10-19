@@ -129,3 +129,77 @@ test-suite unit-tests
 
   if flag(pedantic)
     ghc-options:        -Werror
+
+--executable example-ping-server
+--  hs-source-dirs:       src, example
+--  main-is:              ping-server.hs
+--
+--  other-modules:       
+--      Data.Streaming.NamedPipes
+--    , Data.Streaming.NamedPipes.Internal
+--    , System.Win32.NamedPipes
+--    , System.Win32.NamedPipes.Internal
+--
+--  default-language:     Haskell2010
+--  other-extensions:
+--      DeriveGeneric
+--    , ForeignFunctionInterface
+--    , LambdaCase
+--    , NoImplicitPrelude
+--
+--  build-depends:
+--      base >=4.8 && <5
+--    , bytestring
+--    , case-insensitive
+--    , streaming-commons >=0.1.14 && <0.2
+--    -- ^ Version 0.1.14 exports HasReadBufferSize type class.
+--    , Win32 ==2.3.*
+--
+--  build-tools:          hsc2hs
+--
+--  ghc-options:
+--    -Wall
+--    -fwarn-implicit-prelude
+--    -fwarn-missing-import-lists
+--    -fwarn-tabs
+--    -threaded
+--
+--  if flag(pedantic)
+--    ghc-options:        -Werror
+--
+--executable example-ping-client
+--  hs-source-dirs:       src, example
+--  main-is:              ping-client.hs
+--
+--  other-modules:       
+--      Data.Streaming.NamedPipes
+--    , Data.Streaming.NamedPipes.Internal
+--    , System.Win32.NamedPipes
+--    , System.Win32.NamedPipes.Internal
+--
+--  default-language:     Haskell2010
+--  other-extensions:
+--      DeriveGeneric
+--    , ForeignFunctionInterface
+--    , LambdaCase
+--    , NoImplicitPrelude
+--
+--  build-depends:
+--      base >=4.8 && <5
+--    , bytestring
+--    , case-insensitive
+--    , streaming-commons >=0.1.14 && <0.2
+--    -- ^ Version 0.1.14 exports HasReadBufferSize type class.
+--    , Win32 ==2.3.*
+--
+--  build-tools:          hsc2hs
+--
+--  ghc-options:
+--    -Wall
+--    -fwarn-implicit-prelude
+--    -fwarn-missing-import-lists
+--    -fwarn-tabs
+--    -threaded
+--
+--  if flag(pedantic)
+--    ghc-options:        -Werror
