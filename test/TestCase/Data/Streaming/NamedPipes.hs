@@ -10,7 +10,7 @@
 -- Module:       $HEADER$
 -- Description:  Tests for Data.Streaming.NamedPipes module.
 -- Copyright:    (c) 2016, Ixperta Solutions s.r.o.
--- License:      AllRightsReserved
+-- License:      BSD3
 --
 -- Maintainer:   Ixcom Core Team <ixcom-core@ixperta.com>
 -- Stability:    experimental

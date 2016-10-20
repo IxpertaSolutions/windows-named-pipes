@@ -4,7 +4,7 @@
 -- Module:       $HEADER$
 -- Description:  Windows Named Pipes streaming API.
 -- Copyright:    (c) 2016, Ixperta Solutions s.r.o.
--- License:      AllRightsReserved
+-- License:      BSD3
 --
 -- Maintainer:   Ixcom Core Team <ixcom-core@ixperta.com>
 -- Stability:    experimental
