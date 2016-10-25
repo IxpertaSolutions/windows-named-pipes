@@ -45,7 +45,7 @@ import Data.Eq (Eq((==)))
 import Data.Function (($), (.), on)
 import Data.Functor (fmap)
 import Data.Int (Int)
-import qualified Data.List as List (filter, null)
+import qualified Data.List as List (notElem)
 import Data.Maybe (Maybe(Just, Nothing))
 import Data.Monoid ((<>))
 import Data.Ord (Ord(compare))
@@ -107,7 +107,7 @@ pipeName str
   where
     -- MSDN documentation specifies that backslash is the only character that
     -- is the only invalid character in pipe name.
-    isValid = List.null $ List.filter (== '\\') str
+    isValid = '\\' `List.notElem` str
 
 -- | Utility function that simplifies implementation of 'Eq', and 'Ord'
 -- instances.
@@ -121,9 +121,9 @@ instance Show PipeName where
 -- | Warning: Use with caution! Throws error if string contains backslash. Use
 -- 'pipeName' smart constructor to enforce safety.
 instance IsString PipeName where
-    fromString s = case pipeName s of
-        Just n -> n
-        Nothing -> error
+    fromString = fromMaybe parseError . pipeName
+      where
+        parseError =
             "fromString: PipeName: Backslash ('\\') is an invalid character."
 
 -- | Equality is case-insensitive.
