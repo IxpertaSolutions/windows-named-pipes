@@ -123,7 +123,7 @@ instance Show PipeName where
 instance IsString PipeName where
     fromString = fromMaybe parseError . pipeName
       where
-        parseError =
+        parseError = error
             "fromString: PipeName: Backslash ('\\') is an invalid character."
 
 -- | Equality is case-insensitive.
