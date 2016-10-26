@@ -31,7 +31,7 @@ import Control.Concurrent.Async (async, waitAnyCancel)
 
 import Test.Framework (Test)
 import Test.Framework.Providers.HUnit (testCase)
-import Test.HUnit (Assertion)
+import Test.HUnit (Assertion, assertFailure)
 
 import System.Win32.NamedPipes (PipeName, PipePath(LocalPipe))
 import Data.Streaming.NamedPipes
@@ -61,7 +61,7 @@ withServer name serverApp k = do
     let clientSettings = clientSettingsPipe (LocalPipe name)
     server <- async $ runPipeServer serverSettings serverApp
     clients <- async $ waitReady *> k (runPipeClient clientSettings)
-    timeOut <- async $ threadDelay 500000   -- 500 ms
+    timeOut <- async $ threadDelay 500000 *> assertFailure "timeout"  -- 500 ms
     () <$ waitAnyCancel [server, clients, timeOut]
   where
     newWait = do
