@@ -18,8 +18,11 @@ module Data.Streaming.NamedPipes
     , defaultReadBufferSize
 
     -- * Server
+    , HasAfterBindPipe(afterBindPipeLens)
     , HasPipeName(pipeNameLens)
+    , getAfterBindPipe
     , getPipeName
+    , setAfterBindPipe
     , setPipeName
     , ServerSettingsPipe
     , serverSettingsPipe
@@ -61,6 +64,7 @@ import Data.Streaming.NamedPipes.Internal
         ( ClientSettingsPipe
         , clientPipePath
         )
+    , HasAfterBindPipe(afterBindPipeLens)
     , HasPipeName(pipeNameLens)
     , HasPipePath(pipePathLens)
     , ServerSettingsPipe
@@ -72,10 +76,12 @@ import Data.Streaming.NamedPipes.Internal
         )
     , clientSettingsPipe
     , defaultReadBufferSize
+    , getAfterBindPipe
     , getPipeName
     , getPipePath
     , mkAppDataPipe
     , serverSettingsPipe
+    , setAfterBindPipe
     , setPipeName
     , setPipePath
     )

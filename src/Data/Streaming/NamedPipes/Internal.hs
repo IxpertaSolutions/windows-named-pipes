@@ -17,8 +17,11 @@ module Data.Streaming.NamedPipes.Internal
     , mkAppDataPipe
 
     -- * ServerSettingsPipe
+    , HasAfterBindPipe(..)
     , HasPipeName(..)
+    , getAfterBindPipe
     , getPipeName
+    , setAfterBindPipe
     , setPipeName
     , ServerSettingsPipe(..)
     , serverSettingsPipe
@@ -105,6 +108,24 @@ mkAppDataPipe cfg read write close h = AppDataPipe
 
 -- {{{ ServerSettingsPipe -----------------------------------------------------
 
+-- | Type alias for an after bind hook/callback.
+type AfterBindPipe = PipeHandle -> IO ()
+
+-- | Type class for accessing 'AfterBindPipe' in a data type (usually a type
+-- that represents server settings).
+class HasAfterBindPipe s where
+    -- | Lens for accessing after bind hook/callback in a data type (usually
+    -- server setings).
+    afterBindPipeLens :: Functor f => (AfterBindPipe -> f AfterBindPipe) -> s -> f s
+
+-- | Get after bind hook/callback from server settings.
+getAfterBindPipe :: HasAfterBindPipe s => s -> AfterBindPipe
+getAfterBindPipe = getConst . afterBindPipeLens Const
+
+-- | Set after bind hook/callback from server settings.
+setAfterBindPipe :: HasAfterBindPipe s => AfterBindPipe -> s -> s
+setAfterBindPipe n = runIdentity . afterBindPipeLens (const (Identity n))
+
 -- | Type class for accessing 'PipeName' in a data type it's usually a type
 -- that represents server settings.
 class HasPipeName s where
@@ -123,10 +144,14 @@ setPipeName n = runIdentity . pipeNameLens (const (Identity n))
 -- | Settings of a server that listens on a Windows Named Pipe.
 data ServerSettingsPipe = ServerSettingsPipe
     { serverPipeName :: !PipeName
-    , serverAfterBindPipe :: !(PipeHandle -> IO ())
+    , serverAfterBindPipe :: !AfterBindPipe
     , serverReadBufferSizePipe :: !Int
     , serverPipeMode :: !PipeMode
     }
+
+instance HasAfterBindPipe ServerSettingsPipe where
+    afterBindPipeLens f s@ServerSettingsPipe{serverAfterBindPipe = a} =
+        f a <$$> \b -> s{serverAfterBindPipe = b}
 
 instance HasPipeName ServerSettingsPipe where
     pipeNameLens f s@ServerSettingsPipe{serverPipeName = a} =
