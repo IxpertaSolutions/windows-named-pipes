@@ -94,7 +94,7 @@ client counters =
             "Pong" -> do
                 incClientReceivedPong counters
                 loop (n - 1) appData
-            rsp -> do
+            rsp ->
                 assertFailure $ "Client received unexpected response: " <> show rsp
 
 pipeName :: PipeName

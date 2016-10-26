@@ -92,7 +92,7 @@ server counters = runPipeServer (serverSettingsPipe pipeName) serverApp
             appWrite appData "Pong"
             incServerSendPong counters
             serverApp appData
-        rq -> do
+        rq ->
             assertFailure $ "Server received unexpected request: " <> show rq
 
 pipeName :: PipeName

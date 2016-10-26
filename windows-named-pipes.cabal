@@ -27,6 +27,11 @@ flag pedantic
   default:              False
   manual:               True
 
+flag test-hlint
+  description:          Enable test suite that checks sources using HLint.
+  default:              True
+  manual:               True
+
 library
   hs-source-dirs:       src
   exposed-modules:
@@ -129,6 +134,32 @@ test-suite unit-tests
 
   if flag(pedantic)
     ghc-options:        -Werror
+
+test-suite hlint
+  hs-source-dirs:       test
+  type:                 exitcode-stdio-1.0
+  main-is:              hlint.hs
+  default-language:     Haskell2010
+  other-extensions:
+      NoImplicitPrelude
+
+  ghc-options:
+    -Wall
+    -fwarn-implicit-prelude
+    -fwarn-missing-import-lists
+    -fwarn-tabs
+    -threaded
+    -with-rtsopts=-N
+
+  if flag(pedantic)
+    ghc-options:        -Werror
+
+  if flag(test-hlint)
+    build-depends:
+        base >=4.8 && <5.0
+      , hlint ==1.9.*
+  else
+    buildable: False
 
 --executable example-ping-server
 --  hs-source-dirs:       src, example
