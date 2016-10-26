@@ -20,8 +20,9 @@
 module TestCase.Data.Streaming.NamedPipes (tests)
   where
 
-import Control.Applicative (pure)
+import Control.Applicative ((*>), pure)
 import Control.Concurrent (threadDelay)
+import Control.Concurrent.MVar (newEmptyMVar, tryPutMVar, takeMVar)
 import Data.Function (($), const)
 import Data.Functor ((<$))
 import System.IO (IO)
@@ -39,6 +40,7 @@ import Data.Streaming.NamedPipes
     , runPipeClient
     , runPipeServer
     , serverSettingsPipe
+    , setAfterBindPipe
     )
 
 
@@ -53,10 +55,20 @@ withServer
     -> (((AppDataPipe -> IO a) -> IO a) -> IO ())
     -> IO ()
 withServer name serverApp k = do
-    server <- async $ runPipeServer (serverSettingsPipe name) serverApp
-    clients <- async $ k (runPipeClient (clientSettingsPipe (LocalPipe name)))
+    (signalReady, waitReady) <- newWait
+    let serverSettings = setAfterBindPipe signalReady $
+            serverSettingsPipe name
+    let clientSettings = clientSettingsPipe (LocalPipe name)
+    server <- async $ runPipeServer serverSettings serverApp
+    clients <- async $ waitReady *> k (runPipeClient clientSettings)
     timeOut <- async $ threadDelay 500000   -- 500 ms
     () <$ waitAnyCancel [server, clients, timeOut]
+  where
+    newWait = do
+        ready <- newEmptyMVar
+        let signalReady _ = void $ tryPutMVar ready ()
+        let waitReady = takeMVar ready
+        pure (signalReady, waitReady)
 
 testConnectDisconnect :: Assertion
 testConnectDisconnect =
