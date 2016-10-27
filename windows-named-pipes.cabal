@@ -52,6 +52,7 @@ library
       base >=4.8 && <5
     , bytestring
     , case-insensitive
+    , monad-loops == 0.4.*
     , streaming-commons >=0.1.14 && <0.2
     -- ^ Version 0.1.14 exports HasReadBufferSize type class.
     , Win32 ==2.3.*
@@ -99,6 +100,7 @@ test-suite unit-tests
       base >=4.8 && <5
     , bytestring
     , case-insensitive
+    , monad-loops == 0.4.*
     , streaming-commons >=0.1.14 && <0.2
     -- ^ Version 0.1.14 exports HasReadBufferSize type class.
     , Win32 ==2.3.*

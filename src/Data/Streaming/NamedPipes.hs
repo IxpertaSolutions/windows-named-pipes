@@ -44,10 +44,11 @@ module Data.Streaming.NamedPipes
     )
   where
 
-import Control.Applicative ((*>))
+import Control.Applicative (pure)
 import Control.Exception (bracket, finally, mask, onException)
 import Control.Concurrent (forkIO)
-import Control.Monad (forever, unless, void, when)
+import Control.Monad (unless, void, when)
+import Control.Monad.Loops (iterateM_)
 import Data.Function (($), (.))
 import System.IO (IO)
 
@@ -108,21 +109,32 @@ import System.Win32.NamedPipes
 --     -- -->8-- Server code.
 -- @
 runPipeServer :: ServerSettingsPipe -> (AppDataPipe -> IO ()) -> IO a
-runPipeServer cfg@ServerSettingsPipe{..} app = forever . withPipe $ \pipe -> do
-    haveClient <- connectPipe pipe
-    when haveClient $ serve pipe
+runPipeServer cfg@ServerSettingsPipe{..} app = do
+    pipe <- bindPipe'
+    serverAfterBindPipe pipe
+    iterateM_ connectAndServe pipe
   where
-    withPipe :: (PipeHandle -> IO ()) -> IO ()
-    withPipe k = do
-        pipe <- bindPipe'
-        (serverAfterBindPipe pipe *> k pipe) `onException` closePipe pipe
-            -- It is important to close pipe only when exception is detected,
-            -- otherwise we would close an active handle.
-            --
-            -- On this level we can use plain closePipe without disconnectPipe.
-            -- If we have detected that client is connected then we are
-            -- necessarily inside connection handling thread (see "serve"
-            -- function).
+    connectAndServe :: PipeHandle -> IO PipeHandle
+    connectAndServe pipe =
+        -- It is important to close pipe only when exception is detected,
+        -- otherwise we would close an active handle.
+        --
+        -- On this level we can use plain closePipe without disconnectPipe.
+        -- If we have detected that client is connected then we are
+        -- necessarily inside connection handling thread (see "serve"
+        -- function).
+        (`onException` closePipe pipe) $ do
+            haveClient <- connectPipe pipe
+
+            -- We must create (bind) a new pipe instance before we fork the
+            -- serving thread because otherwise that thread could close the
+            -- handle sooner than we get to call bindPipe' and the named pipe
+            -- would cease to exist for a short moment, confusing clients.
+            pipe' <- bindPipe'
+
+            (`onException` closePipe pipe') $ do
+                when haveClient $ serve pipe
+                pure pipe'
 
     -- We are assuming that it is optimal to use same size of input/output
     -- buffer as the read size when calling readPipe.
