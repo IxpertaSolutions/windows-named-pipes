@@ -3,7 +3,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 -- |
 -- Module:       $HEADER$
--- Description:  Example Haskell module.
+-- Description:  Bindings to Named Pipes Win32 API.
 -- Copyright:    (c) 2016, Ixperta Solutions s.r.o.
 -- License:      BSD3
 --

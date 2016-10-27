@@ -4,7 +4,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 -- |
 -- Module:       $HEADER$
--- Description:  Bindings to Named Pipes Win32 API.
+-- Description:  Bindings to Named Pipes Win32 API (internals).
 -- Copyright:    (c) 2016, Ixperta Solutions s.r.o.
 -- License:      BSD3
 --
@@ -25,7 +25,7 @@ module System.Win32.NamedPipes.Internal
     , InBufferSize
     , DefaultTimeOut
 
-    -- * MaxInstances
+    -- ** MaxInstances
     , MaxInstances
     , pIPE_UNLIMITED_INSTANCES
 
@@ -417,7 +417,7 @@ foreign import WINDOWS_CCONV safe "windows.h DisconnectNamedPipe"
         :: HANDLE
         -> IO Bool
 
--- {{{ disconnectNamedPipe ----------------------------------------------------
+-- }}} disconnectNamedPipe ----------------------------------------------------
 
 -- {{{ Utility Functions ------------------------------------------------------
 

@@ -124,7 +124,7 @@ runPipeServer cfg@ServerSettingsPipe{..} app = forever . withPipe $ \pipe -> do
             -- necessarily inside connection handling thread (see "serve"
             -- function).
 
-    -- | We are assuming that it is optimal to use same size of input/output
+    -- We are assuming that it is optimal to use same size of input/output
     -- buffer as the read size when calling readPipe.
     bindPipe' :: IO PipeHandle
     bindPipe' = bindPipe serverReadBufferSizePipe serverPipeMode serverPipeName
@@ -152,8 +152,8 @@ runPipeServer cfg@ServerSettingsPipe{..} app = forever . withPipe $ \pipe -> do
     -- https://msdn.microsoft.com/en-us/library/windows/desktop/aa365166(v=vs.85).aspx
     closePipe' :: PipeHandle -> IO ()
     closePipe' pipe = do
-        isHandleValid <- disconnectPipe pipe
-        unless isHandleValid $ void (closePipe pipe)
+        isHandleInvalid <- disconnectPipe pipe
+        unless isHandleInvalid $ void (closePipe pipe)
 
     -- Implementation of runPipeServer is inspired by streamings-common, and
     -- Multithreaded Pipe Server example from MSDN:
