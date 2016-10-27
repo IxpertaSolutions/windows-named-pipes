@@ -52,6 +52,7 @@ import Data.Ord (Ord(compare))
 import Data.String (IsString(fromString), String)
 import GHC.Generics (Generic)
 import System.IO (FilePath, IO)
+import System.IO.Error (ioError)
 import Text.Read (Read)
 import Text.Show (Show(showsPrec), showString)
 
@@ -73,11 +74,13 @@ import System.Win32.File
     )
 
 import System.Win32.NamedPipes.Internal
-    ( closeHandleCheckInvalidHandle
+    ( catchPipeBusy
+    , closeHandleCheckInvalidHandle
     , connectNamedPipe
     , createNamedPipe
     , disconnectNamedPipe
     , flushFileBuffersCheckInvalidHandle
+    , nMPWAIT_USE_DEFAULT_WAIT
     , pIPE_ACCESS_DUPLEX
     , pIPE_READMODE_BYTE
     , pIPE_READMODE_MESSAGE
@@ -85,6 +88,7 @@ import System.Win32.NamedPipes.Internal
     , pIPE_TYPE_MESSAGE
     , pIPE_UNLIMITED_INSTANCES
     , pIPE_WAIT
+    , waitNamedPipe
     )
 
 
@@ -266,9 +270,17 @@ connectPipe = connectNamedPipe
 -- in which it will be communicating via the pipe ('pIPE_TYPE_BYTE', or
 -- 'pIPE_TYPE_MESSAGE'), that is up to the server.
 getPipe :: PipePath -> IO PipeHandle
-getPipe path = createFile fileName accessMode shareMode securityAttrs
-    createMode fileAttrOrFlag templateFile
+getPipe path = tryOpenLoop
   where
+    tryOpenLoop = tryOpen `catchPipeBusy` \e -> do
+        notAvailable <- waitNamedPipe fileName nMPWAIT_USE_DEFAULT_WAIT
+        if notAvailable
+            then ioError e
+            else tryOpenLoop
+
+    tryOpen = createFile fileName accessMode shareMode securityAttrs
+        createMode fileAttrOrFlag templateFile
+
     fileName = pipePathToFilePath path
 
     -- Following values are based on Named Pipe Client example from MSDN:

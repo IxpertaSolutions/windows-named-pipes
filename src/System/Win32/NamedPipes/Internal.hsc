@@ -19,6 +19,7 @@ module System.Win32.NamedPipes.Internal
       createNamedPipe
     , connectNamedPipe
     , disconnectNamedPipe
+    , waitNamedPipe
 
     -- * Parameters
     , OutBufferSize
@@ -48,7 +49,13 @@ module System.Win32.NamedPipes.Internal
     , pIPE_TYPE_MESSAGE
     , pIPE_WAIT
 
+    -- ** TimeOut
+    , TimeOut
+    , nMPWAIT_USE_DEFAULT_WAIT
+    , nMPWAIT_WAIT_FOREVER
+
     -- * Utility functions
+    , catchPipeBusy
     , closeHandleCheckInvalidHandle
     , flushFileBuffersCheckInvalidHandle
 
@@ -56,6 +63,7 @@ module System.Win32.NamedPipes.Internal
     , c_CreateNamedPipe
     , c_ConnectNamedPipe
     , c_DisconnectNamedPipe
+    , c_WaitNamedPipe
     )
   where
 
@@ -68,6 +76,7 @@ import Data.Maybe (Maybe)
 import Data.Monoid ((<>))
 import Data.String (String)
 import System.IO (FilePath, IO)
+import System.IO.Error (IOError, catchIOError, ioError)
 import Text.Show (show)
 
 import System.Win32.File
@@ -78,6 +87,7 @@ import System.Win32.File
     )
 import System.Win32.Types
     ( DWORD
+    , ErrCode
     , HANDLE
     , LPCTSTR
     , failIf
@@ -241,6 +251,22 @@ pIPE_REJECT_REMOTE_CLIENTS :: PipeMode
 pIPE_REJECT_REMOTE_CLIENTS = #{const PIPE_REJECT_REMOTE_CLIENTS}
 
 -- }}} PipeMode ---------------------------------------------------------------
+
+-- {{{ TimeOut ----------------------------------------------------------------
+
+type TimeOut = DWORD
+
+-- | The time-out interval is the default value specified by the server
+-- process in the CreateNamedPipe function.
+nMPWAIT_USE_DEFAULT_WAIT :: TimeOut
+nMPWAIT_USE_DEFAULT_WAIT = #{const NMPWAIT_USE_DEFAULT_WAIT}
+
+-- | The function does not return until an instance of the named pipe is
+-- available.
+nMPWAIT_WAIT_FOREVER :: TimeOut
+nMPWAIT_WAIT_FOREVER = #{const NMPWAIT_WAIT_FOREVER}
+
+-- }}} TimeOut ----------------------------------------------------------------
 
 -- {{{ createNamedPipe --------------------------------------------------------
 
@@ -419,6 +445,67 @@ foreign import WINDOWS_CCONV safe "windows.h DisconnectNamedPipe"
 
 -- }}} disconnectNamedPipe ----------------------------------------------------
 
+-- {{{ waitNamedPipe ----------------------------------------------------------
+
+-- | Waits until either a time-out interval elapses or an instance of the
+-- specified named pipe is available for connection (that is, the pipe's
+-- server process has a pending ConnectNamedPipe operation on the pipe).
+--
+-- Function returns 'Data.Bool.False' if an instance of the pipe is available
+-- before the time-out interval elapses, and 'Data.Bool.True' otherwise.
+-- (Do note that this logic differs from the @WaitNamedPipe@ WINAPI function.)
+--
+-- If no instances of the specified named pipe exist, the function returns
+-- immediately, regardless of the time-out value.
+waitNamedPipe
+    :: FilePath
+    -- ^ The name of the named pipe. The string must include the name of the
+    -- computer on which the server process is executing. A period may be used
+    -- for the servername if the pipe is local. The following pipe name format
+    -- is used:
+    --
+    -- @
+    -- \\servername\pipe\pipename
+    -- @
+    -> TimeOut
+    -- ^ The number of milliseconds that the function will wait for an
+    -- instance of the named pipe to be available. You can used one of the
+    -- following values instead of specifying a number of milliseconds:
+    -- 'nMPWAIT_USE_DEFAULT_WAIT', 'nMPWAIT_WAIT_FOREVER'.
+    -> IO Bool
+    -- ^ 'Data.Bool.True' if no instance of the pipe is available.
+waitNamedPipe name timeOut =
+    withTString name $ \n ->
+        failUnlessTrueOr #{const ERROR_SEM_TIMEOUT} errMsg $
+            c_WaitNamedPipe n timeOut
+  where
+    errMsg = "WaitNamedPipe " <> show name
+
+-- | FFI call to @WaitNamedPipe@ function.
+--
+-- Waits until either a time-out interval elapses or an instance of the
+-- specified named pipe is available for connection (that is, the pipe's
+-- server process has a pending @ConnectNamedPipe@ operation on the pipe).
+--
+-- <https://msdn.microsoft.com/en-us/library/windows/desktop/aa365800(v=vs.85).aspx MSDN: WaitNamedPipe function>
+--
+-- @
+-- BOOL WINAPI WaitNamedPipe(
+--     _In_ LPCTSTR lpNamedPipeName,
+--     _In_ DWORD   nTimeOut
+-- );
+-- @
+--
+-- Since this is basically a wait\/sleep function, we need to use *safe* and
+-- *interruptible* foreign call, because they delay the GC sync.
+foreign import WINDOWS_CCONV interruptible "windows.h WaitNamedPipeW"
+    c_WaitNamedPipe
+        :: LPCTSTR
+        -> TimeOut
+        -> IO Bool
+
+-- }}} waitNamedPipe ----------------------------------------------------------
+
 -- {{{ Utility Functions ------------------------------------------------------
 
 -- | Closes an open object handle.
@@ -428,7 +515,7 @@ foreign import WINDOWS_CCONV safe "windows.h DisconnectNamedPipe"
 -- low-level call. This function enables us to ignore already closed handles.
 closeHandleCheckInvalidHandle :: HANDLE -> IO Bool
 closeHandleCheckInvalidHandle h =
-    failUnlessSuccessOrInvalidHandle "CloseHandle" (c_CloseHandle h)
+    failUnlessTrueOrInvalidHandle "CloseHandle" (c_CloseHandle h)
 
 -- | Flushes the buffers of a specified file and causes all buffered data to
 -- be written to a file.
@@ -438,19 +525,38 @@ closeHandleCheckInvalidHandle h =
 -- low-level call. This function enables us to ignore already closed handles.
 flushFileBuffersCheckInvalidHandle :: HANDLE -> IO Bool
 flushFileBuffersCheckInvalidHandle h =
-    failUnlessSuccessOrInvalidHandle "FlushFileBuffers" (c_FlushFileBuffers h)
+    failUnlessTrueOrInvalidHandle "FlushFileBuffers" (c_FlushFileBuffers h)
 
 -- | INTERNAL FUNCTION! DO NOT EXPORT!
 --
 -- Check that function either succeeded or if it failed due to
 -- @ERROR_INVALID_HANDLE@. This way we can avoid issues with non-idempotent
 -- disconnect\/close\/flush operations.
-failUnlessSuccessOrInvalidHandle :: String -> IO Bool -> IO Bool
-failUnlessSuccessOrInvalidHandle fnName f =
-    failUnlessSuccessOr #{const ERROR_INVALID_HANDLE} fnName $ do
+failUnlessTrueOrInvalidHandle :: String -> IO Bool -> IO Bool
+failUnlessTrueOrInvalidHandle = failUnlessTrueOr #{const ERROR_INVALID_HANDLE}
+
+-- | INTERNAL FUNCTION! DO NOT EXPORT!
+--
+-- Check that function either succeeded (returns 'Data.Bool.False') or if it
+-- failed due to @err@ ('Data.Bool.True'). If it failed due to other error,
+-- exception is thrown.
+failUnlessTrueOr :: ErrCode -> String -> IO Bool -> IO Bool
+failUnlessTrueOr err fnName f =
+    failUnlessSuccessOr err fnName $ do
         r <- f
         if r
             then return #{const ERROR_SUCCESS}
             else getLastError
+
+-- | Catch and handle @ERROR_PIPE_BUSY@ errors. Useful for wrapping
+-- 'System.Win32.File.createFile' calls.
+catchPipeBusy :: IO a -> (IOError -> IO a) -> IO a
+catchPipeBusy action handler = action `catchIOError` handler'
+  where
+    handler' e = do
+        isPipeBusy <- (== #{const ERROR_PIPE_BUSY}) <$> getLastError
+        if isPipeBusy
+            then handler e
+            else ioError e
 
 -- }}} Utility Functions ------------------------------------------------------
