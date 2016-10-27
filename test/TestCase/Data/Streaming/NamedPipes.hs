@@ -23,15 +23,17 @@ module TestCase.Data.Streaming.NamedPipes (tests)
 import Control.Applicative ((*>), pure)
 import Control.Concurrent (myThreadId, threadDelay)
 import Control.Concurrent.MVar (newEmptyMVar, tryPutMVar, takeMVar)
-import Control.Monad (void)
+import Control.Monad (replicateM_, void)
 import Data.Function (($), (.), const)
 import Data.Functor ((<$))
+import Data.Int (Int)
+import Data.List (replicate)
 import Data.Monoid ((<>))
 import Data.String (fromString)
 import System.IO (IO)
 import Text.Show (show)
 
-import Control.Concurrent.Async (async, waitAnyCancel)
+import Control.Concurrent.Async (async, mapConcurrently, waitAnyCancel)
 import System.Win32.Process (getProcessId)
 import System.Win32.Types (iNVALID_HANDLE_VALUE)
 
@@ -53,6 +55,8 @@ import Data.Streaming.NamedPipes
 tests :: [Test]
 tests =
     [ testCase "Empty server and client" testConnectDisconnect
+    , testCase "Multiple empty clients (consecutive)" testConsecutiveClients
+    , testCase "Multiple empty clients (concurrent)" testConcurrentClients
     ]
 
 withServer
@@ -82,6 +86,23 @@ withServer serverApp k = do
 testConnectDisconnect :: Assertion
 testConnectDisconnect =
     withServer (const $ pure ()) ($ const $ pure ())
+
+testConsecutiveClients :: Assertion
+testConsecutiveClients = withServer server $ \runClient ->
+    replicateM_ numClients (runClient client)
+  where
+    server _ = pure ()
+    client _ = pure ()
+
+testConcurrentClients :: Assertion
+testConcurrentClients = withServer server $ \runClient ->
+    void . mapConcurrently runClient $ replicate numClients client
+  where
+    server _ = pure ()
+    client _ = pure ()
+
+numClients :: Int
+numClients = 10
 
 genPipeName :: IO PipeName
 genPipeName = do
