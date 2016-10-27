@@ -21,13 +21,19 @@ module TestCase.Data.Streaming.NamedPipes (tests)
   where
 
 import Control.Applicative ((*>), pure)
-import Control.Concurrent (threadDelay)
+import Control.Concurrent (myThreadId, threadDelay)
 import Control.Concurrent.MVar (newEmptyMVar, tryPutMVar, takeMVar)
-import Data.Function (($), const)
+import Control.Monad (void)
+import Data.Function (($), (.), const)
 import Data.Functor ((<$))
+import Data.Monoid ((<>))
+import Data.String (fromString)
 import System.IO (IO)
+import Text.Show (show)
 
 import Control.Concurrent.Async (async, waitAnyCancel)
+import System.Win32.Process (getProcessId)
+import System.Win32.Types (iNVALID_HANDLE_VALUE)
 
 import Test.Framework (Test)
 import Test.Framework.Providers.HUnit (testCase)
@@ -50,18 +56,21 @@ tests =
     ]
 
 withServer
-    :: PipeName
-    -> (AppDataPipe -> IO ())
+    :: (AppDataPipe -> IO ())
     -> (((AppDataPipe -> IO a) -> IO a) -> IO ())
     -> IO ()
-withServer name serverApp k = do
+withServer serverApp k = do
+    name <- genPipeName
+
     (signalReady, waitReady) <- newWait
     let serverSettings = setAfterBindPipe signalReady $
             serverSettingsPipe name
     let clientSettings = clientSettingsPipe (LocalPipe name)
+
     server <- async $ runPipeServer serverSettings serverApp
     clients <- async $ waitReady *> k (runPipeClient clientSettings)
     timeOut <- async $ threadDelay 500000 *> assertFailure "timeout"  -- 500 ms
+
     () <$ waitAnyCancel [server, clients, timeOut]
   where
     newWait = do
@@ -72,7 +81,10 @@ withServer name serverApp k = do
 
 testConnectDisconnect :: Assertion
 testConnectDisconnect =
-    withServer pipeName (const $ pure ()) ($ const $ pure ())
+    withServer (const $ pure ()) ($ const $ pure ())
 
-pipeName :: PipeName
-pipeName = "win-named-pipes-test"
+genPipeName :: IO PipeName
+genPipeName = do
+    processId <- getProcessId iNVALID_HANDLE_VALUE
+    threadId <- myThreadId
+    pure . fromString $ show processId <> "-" <> show threadId
