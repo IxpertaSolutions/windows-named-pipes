@@ -317,6 +317,10 @@ disconnectPipe pipe = do
 -- {{{ readPipe, writePipe ----------------------------------------------------
 
 -- | Read data up to specified size from a Named Pipe.
+--
+-- Note that if the pipe is in 'MessageMode', any attempt to read a message
+-- larger than the specified size will fail with @ERROR_MORE_DATA@. This is a
+-- limitation of the current 'readFile' implementation.
 readPipe
     :: Int
     -- ^ Maximum number of bytes to read from a pipe.

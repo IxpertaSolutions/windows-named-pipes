@@ -20,24 +20,32 @@
 module TestCase.Data.Streaming.NamedPipes (tests)
   where
 
-import Control.Applicative ((*>), pure)
+import Prelude (mod, succ)
+
+import Control.Applicative ((*>), (<$>), pure)
 import Control.Arrow (first)
 import Control.Concurrent (myThreadId, threadDelay, throwTo)
 import Control.Concurrent.MVar (newEmptyMVar, tryPutMVar, takeMVar)
 import Control.Exception (catch)
 import Control.Monad ((>>=), replicateM_, void)
+import Control.Monad.Loops (iterateUntilM)
+import Data.Bool (otherwise)
 import Data.Function (($), (.), const, id)
 import Data.Functor ((<$))
 import Data.Int (Int)
 import Data.List (replicate)
+import Data.Maybe (Maybe(Just))
 import Data.Monoid ((<>))
+import Data.Ord ((>=))
 import Data.String (fromString)
+import Data.Tuple (fst)
 import System.IO (IO)
 import Text.Show (show)
 
 import Control.Concurrent.Async (async, mapConcurrently, waitAnyCancel)
 import System.Win32.Process (getProcessId)
 import System.Win32.Types (iNVALID_HANDLE_VALUE)
+import qualified Data.ByteString as BS (length, unfoldrN)
 
 import Test.Framework (Test)
 import Test.Framework.Providers.HUnit (testCase)
@@ -73,6 +81,7 @@ tests =
     , testCase "Multiple empty clients (concurrent)" testConcurrentClients
     , testCase "Message mode" testMessageMode
     , testCase "Stream mode" testStreamMode
+    , testCase "Long data exchange in stream mode" testLongStreams
     ]
 
 -- | Run a server-clients interaction. HUnit assertions may be used in both
@@ -197,3 +206,34 @@ testStreamMode = do
             signal
             appRead appData >>= \m -> m @?= "end"
     withServer conf server ($ client)
+
+-- | Test sending larger (than buffer size) amounts of data through pipes.
+--
+-- This unfortunately doesn't work in 'MessageMode' due to
+-- 'System.Win32.NamedPipes.Internal.readFile' not handling @ERROR_MORE_DATA@.
+testLongStreams :: Assertion
+testLongStreams = withServer conf server ($ client)
+  where
+    conf = first $ setPipeMode StreamMode
+    server appData = do
+        appReadN appData (BS.length long1) >>= \m -> m @?= long1
+        appWrite appData "ack1"
+        appReadN appData (BS.length long2) >>= \m -> m @?= long2
+        appWrite appData "ack2"
+    client appData = do
+        appWrite appData long1
+        appRead appData >>= \m -> m @?= "ack1"
+        appWrite appData long2
+        appRead appData >>= \m -> m @?= "ack2"
+
+    appReadN appData n = go ""
+      where
+        go readSoFar
+          | BS.length readSoFar >= n = pure readSoFar
+          | otherwise = (readSoFar <>) <$> appRead appData >>= go
+
+    -- don't cycle when read in chunks
+    prime = 251
+    gen n = Just (n `mod` prime, succ n `mod` prime)
+    long1 = fst $ BS.unfoldrN 65536 gen 0 -- larger than defaultReadBufferSize
+    long2 = fst $ BS.unfoldrN 1048576 gen 0 -- quite long indeed
