@@ -19,7 +19,9 @@ module System.Win32.NamedPipes.Internal
       createNamedPipe
     , connectNamedPipe
     , disconnectNamedPipe
+    , readFile
     , waitNamedPipe
+    , writeFile
 
     -- * Parameters
     , OutBufferSize
@@ -60,10 +62,12 @@ module System.Win32.NamedPipes.Internal
     , flushFileBuffersCheckInvalidHandle
 
     -- * Low-level FFI Calls
-    , c_CreateNamedPipe
     , c_ConnectNamedPipe
+    , c_CreateNamedPipe
     , c_DisconnectNamedPipe
+    , c_ReadFile
     , c_WaitNamedPipe
+    , c_WriteFile
     )
   where
 
@@ -75,6 +79,9 @@ import Data.Functor ((<$>))
 import Data.Maybe (Maybe)
 import Data.Monoid ((<>))
 import Data.String (String)
+import Foreign.Ptr (Ptr)
+import Foreign.Marshal.Alloc (alloca)
+import Foreign.Storable (peek)
 import System.IO (FilePath, IO)
 import System.IO.Error (IOError, catchIOError, ioError)
 import Text.Show (show)
@@ -515,6 +522,32 @@ foreign import WINDOWS_CCONV interruptible "windows.h WaitNamedPipeW"
         -> IO Bool
 
 -- }}} waitNamedPipe ----------------------------------------------------------
+
+-- {{{ readFile, writeFile ----------------------------------------------------
+
+-- | Interruptible version of 'System.Win32.File.win32_ReadFile'.
+readFile :: HANDLE -> Ptr a -> DWORD -> Maybe LPOVERLAPPED -> IO DWORD
+readFile h buf n mb_over =
+  alloca $ \ p_n -> do
+  failIfFalse_ "ReadFile" $ c_ReadFile h buf n p_n (maybePtr mb_over)
+  peek p_n
+
+-- | Interruptible version of 'System.Win32.File.c_ReadFile'.
+foreign import WINDOWS_CCONV interruptible "windows.h ReadFile"
+  c_ReadFile :: HANDLE -> Ptr a -> DWORD -> Ptr DWORD -> LPOVERLAPPED -> IO Bool
+
+-- | Interruptible version of 'System.Win32.File.win32_WriteFile'.
+writeFile :: HANDLE -> Ptr a -> DWORD -> Maybe LPOVERLAPPED -> IO DWORD
+writeFile h buf n mb_over =
+  alloca $ \ p_n -> do
+  failIfFalse_ "WriteFile" $ c_WriteFile h buf n p_n (maybePtr mb_over)
+  peek p_n
+
+-- | Interruptible version of 'System.Win32.File.c_WriteFile'.
+foreign import WINDOWS_CCONV interruptible "windows.h WriteFile"
+  c_WriteFile :: HANDLE -> Ptr a -> DWORD -> Ptr DWORD -> LPOVERLAPPED -> IO Bool
+
+-- }}} readFile, writeFile ----------------------------------------------------
 
 -- {{{ Utility Functions ------------------------------------------------------
 

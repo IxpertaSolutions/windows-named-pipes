@@ -69,8 +69,6 @@ import System.Win32.File
     , gENERIC_WRITE
     , oPEN_EXISTING
     , sECURITY_ANONYMOUS
-    , win32_ReadFile
-    , win32_WriteFile
     )
 
 import System.Win32.NamedPipes.Internal
@@ -88,7 +86,9 @@ import System.Win32.NamedPipes.Internal
     , pIPE_TYPE_MESSAGE
     , pIPE_UNLIMITED_INSTANCES
     , pIPE_WAIT
+    , readFile
     , waitNamedPipe
+    , writeFile
     )
 
 
@@ -332,7 +332,7 @@ readPipe bufSize h =
     -- See MSDN documentation on details about Win32 ReadFile function:
     -- https://msdn.microsoft.com/en-us/library/windows/desktop/aa365467(v=vs.85).aspx
     readPipe' ptr = failIf (== 0) "readPipe"
-         $ win32_ReadFile h ptr (fromIntegral bufSize) overlapped
+         $ readFile h ptr (fromIntegral bufSize) overlapped
 
     -- Not using overlapped (asynchronous) I/O.
     overlapped = Nothing
@@ -348,7 +348,7 @@ writePipe h bs = ByteString.unsafeUseAsCStringLen bs $ void . writePipe'
     -- See MSDN documentation on details about Win32 WriteFile function:
     -- https://msdn.microsoft.com/en-us/library/windows/desktop/aa365747(v=vs.85).aspx
     writePipe' (ptr, len) = failIf (/= fromIntegral len) "writePipe"
-        $ win32_WriteFile h ptr (fromIntegral len) overlapped
+        $ writeFile h ptr (fromIntegral len) overlapped
 
     -- Not using overlapped (asynchronous) I/O.
     overlapped = Nothing
