@@ -24,7 +24,7 @@ import Control.Applicative ((*>), pure)
 import Control.Concurrent (myThreadId, threadDelay, throwTo)
 import Control.Concurrent.MVar (newEmptyMVar, tryPutMVar, takeMVar)
 import Control.Exception (catch)
-import Control.Monad (replicateM_, void)
+import Control.Monad ((>>=), replicateM_, void)
 import Data.Function (($), (.), const)
 import Data.Functor ((<$))
 import Data.Int (Int)
@@ -40,12 +40,14 @@ import System.Win32.Types (iNVALID_HANDLE_VALUE)
 
 import Test.Framework (Test)
 import Test.Framework.Providers.HUnit (testCase)
-import Test.HUnit (Assertion, assertFailure)
+import Test.HUnit (Assertion, (@?=), assertFailure)
 import Test.HUnit.Lang (HUnitFailure)
 
 import System.Win32.NamedPipes (PipeName, PipePath(LocalPipe))
 import Data.Streaming.NamedPipes
     ( AppDataPipe
+    , appRead
+    , appWrite
     , clientSettingsPipe
     , runPipeClient
     , runPipeServer
@@ -57,6 +59,8 @@ import Data.Streaming.NamedPipes
 tests :: [Test]
 tests =
     [ testCase "Empty server and client" testConnectDisconnect
+    , testCase "Server pings, client waits" testServerPing
+    , testCase "Client pings, server waits" testClientPing
     , testCase "Multiple empty clients (consecutive)" testConsecutiveClients
     , testCase "Multiple empty clients (concurrent)" testConcurrentClients
     ]
@@ -91,6 +95,28 @@ withServer serverApp k = do
 testConnectDisconnect :: Assertion
 testConnectDisconnect =
     withServer (const $ pure ()) ($ const $ pure ())
+
+testServerPing :: Assertion
+testServerPing = withServer server ($ client)
+  where
+    server appData = do
+        appWrite appData "ping"
+        appRead appData >>= \m -> m @?= "pong"
+        appWrite appData "end"
+    client appData = do
+        appRead appData >>= \m -> m @?= "ping"
+        appWrite appData "pong"
+        appRead appData >>= \m -> m @?= "end"
+
+testClientPing :: Assertion
+testClientPing = withServer server ($ client)
+  where
+    server appData = do
+        appRead appData >>= \m -> m @?= "ping"
+        appWrite appData "pong"
+    client appData = do
+        appWrite appData "ping"
+        appRead appData >>= \m -> m @?= "pong"
 
 testConsecutiveClients :: Assertion
 testConsecutiveClients = withServer server $ \runClient ->
