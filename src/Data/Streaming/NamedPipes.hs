@@ -105,7 +105,7 @@ import System.Win32.NamedPipes
 -- Example:
 --
 -- @
--- 'runPipeServer' ('serverSettingsPipe' pipeName) $ \appData ->
+-- 'runPipeServer' ('serverSettingsPipe' pipeName) $ \\appData ->
 --     -- -->8-- Server code.
 -- @
 runPipeServer :: ServerSettingsPipe -> (AppDataPipe -> IO ()) -> IO a
@@ -177,7 +177,7 @@ runPipeServer cfg@ServerSettingsPipe{..} app = do
 -- Example:
 --
 -- @
--- 'runPipeClient' ('clientSettingsPipe' pipePath) $ \appData ->
+-- 'runPipeClient' ('clientSettingsPipe' pipePath) $ \\appData ->
 --     -- -->8-- Client code.
 -- @
 runPipeClient :: ClientSettingsPipe -> (AppDataPipe -> IO a) -> IO a

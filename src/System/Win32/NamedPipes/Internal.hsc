@@ -142,33 +142,38 @@ type PipeOpenMode = DWORD
 
 -- | The pipe is bi-directional; both server and client processes can read from
 -- and write to the pipe. This mode gives the server the equivalent of
--- 'gENERIC_READ' and 'gENERIC_WRITE' access to the pipe. The client can
--- specify 'gENERIC_READ' or 'gENERIC_WRITE', or both, when it connects to the
--- pipe using the 'System.Win32.Files.createFile' function.
+-- 'System.Win32.File.gENERIC_READ' and 'System.Win32.File.gENERIC_WRITE'
+-- access to the pipe. The client can specify 'System.Win32.File.gENERIC_READ'
+-- or 'System.Win32.File.gENERIC_WRITE', or both, when it connects to the pipe
+-- using the 'System.Win32.Files.createFile' function.
 pIPE_ACCESS_DUPLEX :: PipeOpenMode
 pIPE_ACCESS_DUPLEX = #{const PIPE_ACCESS_DUPLEX}
 
 -- | The flow of data in the pipe goes from client to server only. This mode
--- gives the server the equivalent of GENERIC_READ access to the pipe. The
--- client must specify 'gENERIC_WRITE' access when connecting to the pipe. If
--- the client must read pipe settings by calling the @GetNamedPipeInfo@ or
--- @GetNamedPipeHandleState@ functions, the client must specify 'gENERIC_WRITE'
--- and 'fILE_READ_ATTRIBUTES' access when connecting to the pipe.
+-- gives the server the equivalent of @GENERIC_READ@ access to the pipe. The
+-- client must specify 'System.Win32.File.gENERIC_WRITE' access when
+-- connecting to the pipe. If the client must read pipe settings by calling
+-- the @GetNamedPipeInfo@ or @GetNamedPipeHandleState@ functions, the client
+-- must specify 'System.Win32.File.gENERIC_WRITE' and
+-- 'System.Win32.File.fILE_READ_ATTRIBUTES' access when connecting to the
+-- pipe.
 pIPE_ACCESS_INBOUND :: PipeOpenMode
 pIPE_ACCESS_INBOUND = #{const PIPE_ACCESS_INBOUND}
 
 -- | The flow of data in the pipe goes from server to client only. This mode
--- gives the server the equivalent of GENERIC_WRITE access to the pipe. The
--- client must specify 'gENERIC_READ' access when connecting to the pipe. If
--- the client must change pipe settings by calling the SetNamedPipeHandleState
--- function, the client must specify GENERIC_READ and 'fILE_WRITE_ATTRIBUTES'
--- access when connecting to the pipe.
+-- gives the server the equivalent of @GENERIC_WRITE@ access to the pipe. The
+-- client must specify 'System.Win32.File.gENERIC_READ' access when connecting
+-- to the pipe. If the client must change pipe settings by calling the
+-- @SetNamedPipeHandleState@ function, the client must specify
+-- 'System.Win32.File.gENERIC_READ' and
+-- 'System.Win32.File.fILE_WRITE_ATTRIBUTES' access when connecting to the
+-- pipe.
 pIPE_ACCESS_OUTBOUND :: PipeOpenMode
 pIPE_ACCESS_OUTBOUND = #{const PIPE_ACCESS_OUTBOUND}
 
 -- | If you attempt to create multiple instances of a pipe with this flag,
 -- creation of the first instance succeeds, but creation of the next instance
--- fails with 'eRROR_ACCESS_DENIED'.
+-- fails with @ERROR_ACCESS_DENIED@.
 --
 -- Windows 2000: This flag is not supported until Windows 2000 SP2 and Windows
 -- XP.
@@ -202,32 +207,32 @@ pIPE_TYPE_BYTE = #{const PIPE_TYPE_BYTE}
 
 -- | Data is written to the pipe as a stream of messages. The pipe treats the
 -- bytes written during each write operation as a message unit. The
--- 'getLastError' function returns 'eRROR_MORE_DATA' when a message is not read
+-- 'getLastError' function returns @ERROR_MORE_DATA@ when a message is not read
 -- completely. This mode can be used with either 'pIPE_READMODE_MESSAGE' or
 -- 'pIPE_READMODE_BYTE'.
 pIPE_TYPE_MESSAGE :: PipeMode
 pIPE_TYPE_MESSAGE = #{const PIPE_TYPE_MESSAGE}
 
 -- | Data is read from the pipe as a stream of bytes. This mode can be used
--- with either PIPE_TYPE_MESSAGE or PIPE_TYPE_BYTE.
+-- with either 'pIPE_TYPE_MESSAGE' or 'pIPE_TYPE_BYTE'.
 pIPE_READMODE_BYTE :: PipeMode
 pIPE_READMODE_BYTE = #{const PIPE_READMODE_BYTE}
 
 -- | Data is read from the pipe as a stream of messages. This mode can be only
--- used if PIPE_TYPE_MESSAGE is also specified.
+-- used if 'pIPE_TYPE_MESSAGE' is also specified.
 pIPE_READMODE_MESSAGE :: PipeMode
 pIPE_READMODE_MESSAGE = #{const PIPE_READMODE_MESSAGE}
 
 -- | Blocking mode is enabled. When the pipe handle is specified in the
--- ReadFile, WriteFile, or ConnectNamedPipe function, the operations are not
--- completed until there is data to read, all data is written, or a client is
--- connected. Use of this mode can mean waiting indefinitely in some situations
--- for a client process to perform an action.
+-- @ReadFile@, @WriteFile@, or @ConnectNamedPipe@ function, the operations are
+-- not completed until there is data to read, all data is written, or a client
+-- is connected. Use of this mode can mean waiting indefinitely in some
+-- situations for a client process to perform an action.
 pIPE_WAIT :: PipeMode
 pIPE_WAIT = #{const PIPE_WAIT}
 
--- | Nonblocking mode is enabled. In this mode, ReadFile, WriteFile, and
--- ConnectNamedPipe always return immediately.
+-- | Nonblocking mode is enabled. In this mode, @ReadFile@, @WriteFile@, and
+-- @ConnectNamedPipe@ always return immediately.
 --
 -- Note that nonblocking mode is supported for compatibility with Microsoft LAN
 -- Manager version 2.0 and should not be used to achieve asynchronous I/O with
@@ -305,14 +310,14 @@ createNamedPipe
     -- instances that can be created is limited only by the availability of
     -- system resources. If nMaxInstances is greater than
     -- 'pIPE_UNLIMITED_INSTANCES', the return value is 'iNVALID_HANDLE_VALUE'
-    -- and GetLastError returns 'eRROR_INVALID_PARAMETER'.
+    -- and GetLastError returns @ERROR_INVALID_PARAMETER@.
     -> OutBufferSize
     -- ^ The number of bytes to reserve for the output buffer.
     -> InBufferSize
     -- ^ The number of bytes to reserve for the input buffer.
     -> DefaultTimeOut
     -- ^ The default time-out value, in milliseconds, if the @WaitNamedPipe@
-    -- function specifies @NMPWAIT_USE_DEFAULT_WAIT.@ Each instance of a named
+    -- function specifies 'nMPWAIT_USE_DEFAULT_WAIT'. Each instance of a named
     -- pipe must specify the same value.
     --
     -- A value of zero will result in a default time-out of 50 milliseconds.
@@ -377,6 +382,11 @@ foreign import WINDOWS_CCONV unsafe "windows.h CreateNamedPipeW"
 -- | Enables a named pipe server process to wait for a client process to
 -- connect to an instance of a named pipe. A client process connects by calling
 -- the 'System.Win32.File.createFile' function.
+--
+-- Function returns 'Data.Bool.True' if the pipe is successfully connected to
+-- a client, and 'Data.Bool.False' otherwise.
+-- (Do note that this logic differs slightly from the @ConnectNamedPipe@
+-- WINAPI function.)
 connectNamedPipe :: HANDLE -> IO Bool
 connectNamedPipe h =
     successOrCheckIfAlreadyConnected $ c_ConnectNamedPipe h nullPtr
@@ -431,7 +441,7 @@ disconnectNamedPipe =
 --
 -- Disconnects the server end of a named pipe instance from a client process.
 --
--- <https://msdn.microsoft.com/en-us/library/windows/desktop/aa365166(v=vs.85).aspx>
+-- <https://msdn.microsoft.com/en-us/library/windows/desktop/aa365166(v=vs.85).aspx MSDN: DisconnectNamedPipe function>
 --
 -- @
 -- BOOL WINAPI DisconnectNamedPipe(
@@ -465,11 +475,11 @@ waitNamedPipe
     -- is used:
     --
     -- @
-    -- \\servername\pipe\pipename
+    -- \\\\servername\\pipe\\pipename
     -- @
     -> TimeOut
     -- ^ The number of milliseconds that the function will wait for an
-    -- instance of the named pipe to be available. You can used one of the
+    -- instance of the named pipe to be available. You can use one of the
     -- following values instead of specifying a number of milliseconds:
     -- 'nMPWAIT_USE_DEFAULT_WAIT', 'nMPWAIT_WAIT_FOREVER'.
     -> IO Bool

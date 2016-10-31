@@ -103,14 +103,14 @@ newtype PipeName = PipeName String
   deriving Generic
 
 -- | Smart constructor for 'PipeName' that returns 'Nothing', when the string
--- contains backslash (@\'\\\'@).
+-- contains backslash (@\'\\\\\'@).
 pipeName :: String -> Maybe PipeName
 pipeName str
   | isValid = Just $ PipeName str
   | otherwise = Nothing
   where
-    -- MSDN documentation specifies that backslash is the only character that
-    -- is the only invalid character in pipe name.
+    -- MSDN documentation specifies that backslash is the only character in
+    -- pipe name.
     isValid = '\\' `List.notElem` str
 
 -- | Utility function that simplifies implementation of 'Eq', and 'Ord'
@@ -258,6 +258,9 @@ bindPipe bufSize mode name =
 -- | Enables a named pipe server process to wait for a client process to
 -- connect to an instance of a named pipe. A client process connects by calling
 -- the 'getPipe' function.
+--
+-- Function returns 'Data.Bool.True' if the pipe is successfully connected to
+-- a client, and 'Data.Bool.False' otherwise.
 connectPipe :: PipeHandle -> IO Bool
 connectPipe = connectNamedPipe
 {-# INLINE connectPipe #-}
@@ -358,3 +361,5 @@ writePipe h bs = ByteString.unsafeUseAsCStringLen bs $ void . writePipe'
     overlapped = Nothing
 
 -- }}} readPipe, writePipe ----------------------------------------------------
+
+-- }}} Operations on Named Pipes ----------------------------------------------
