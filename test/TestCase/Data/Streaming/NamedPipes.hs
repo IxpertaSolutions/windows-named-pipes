@@ -67,6 +67,9 @@ tests =
     , testCase "Multiple empty clients (concurrent)" testConcurrentClients
     ]
 
+-- | Run a server-clients interaction. HUnit assertions may be used in both
+-- server and clients, although do note that exceptions thrown in the server
+-- after all clients have finished are very likely to be ignored.
 withServer
     :: ((ServerSettingsPipe, ClientSettingsPipe)
         -> (ServerSettingsPipe, ClientSettingsPipe))
@@ -97,10 +100,12 @@ withServer conf serverApp k = do
         let waitReady = takeMVar ready
         pure (signalReady, waitReady)
 
+-- | Simple test with a single client and no data being sent either way.
 testConnectDisconnect :: Assertion
 testConnectDisconnect =
     withServer id (const $ pure ()) ($ const $ pure ())
 
+-- | Test that a server may start sending data first.
 testServerPing :: Assertion
 testServerPing = withServer id server ($ client)
   where
@@ -113,6 +118,7 @@ testServerPing = withServer id server ($ client)
         appWrite appData "pong"
         appRead appData >>= \m -> m @?= "end"
 
+-- | Test that a client may start sending data first.
 testClientPing :: Assertion
 testClientPing = withServer id server ($ client)
   where
@@ -123,6 +129,9 @@ testClientPing = withServer id server ($ client)
         appWrite appData "ping"
         appRead appData >>= \m -> m @?= "pong"
 
+-- | Test that multiple clients can connect one after the other. Both server
+-- and clients end immediately, increasing the likelihood of race conditions
+-- in connection logic being triggered.
 testConsecutiveClients :: Assertion
 testConsecutiveClients = withServer id server $ \runClient ->
     replicateM_ numClients (runClient client)
@@ -130,6 +139,9 @@ testConsecutiveClients = withServer id server $ \runClient ->
     server _ = pure ()
     client _ = pure ()
 
+-- | Test that multiple clients can connect simultaneously. Both server and
+-- clients end immediately, increasing the likelihood of race conditions in
+-- connection logic being triggered.
 testConcurrentClients :: Assertion
 testConcurrentClients = withServer id server $ \runClient ->
     void . mapConcurrently runClient $ replicate numClients client
