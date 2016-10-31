@@ -70,18 +70,18 @@ defaultReadBufferSize = 32768
 
 -- | The data passed to an @Application@.
 data AppDataPipe = AppDataPipe
-    { appReadPipe' :: !(IO ByteString)
-    , appWritePipe' :: !(ByteString -> IO ())
-    , appClosePipe' :: !(IO ())
-    , appRawPipe' :: PipeHandle
+    { appReadPipe :: !(IO ByteString)
+    , appWritePipe :: !(ByteString -> IO ())
+    , appClosePipe :: !(IO ())
+    , appRawPipe :: PipeHandle
     }
 
 instance HasReadWrite AppDataPipe where
-    readLens f s@AppDataPipe{appReadPipe' = a} =
-        f a <$$> \b -> s{appReadPipe' = b}
+    readLens f s@AppDataPipe{appReadPipe = a} =
+        f a <$$> \b -> s{appReadPipe = b}
 
-    writeLens f s@AppDataPipe{appWritePipe' = a} =
-        f a <$$> \b -> s{appWritePipe' = b}
+    writeLens f s@AppDataPipe{appWritePipe = a} =
+        f a <$$> \b -> s{appWritePipe = b}
 
 -- | Smart constructor for 'AppDataPipe'.
 mkAppDataPipe
@@ -97,10 +97,10 @@ mkAppDataPipe
     -> PipeHandle
     -> AppDataPipe
 mkAppDataPipe cfg read write close h = AppDataPipe
-    { appReadPipe' = read (getReadBufferSize cfg) h
-    , appWritePipe' = write h
-    , appClosePipe' = close h
-    , appRawPipe' = h
+    { appReadPipe = read (getReadBufferSize cfg) h
+    , appWritePipe = write h
+    , appClosePipe = close h
+    , appRawPipe = h
     }
 {-# INLINE mkAppDataPipe #-}
 
