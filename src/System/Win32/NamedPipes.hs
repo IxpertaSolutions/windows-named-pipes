@@ -174,28 +174,21 @@ pipePath srv = RemotePipe srv
 
 -- | Utility function that simplifies implementation of 'Eq', and 'Ord'
 -- instances.
-onCiPipePath
-    :: ((Maybe (CI String), CI String) -> (Maybe (CI String), CI String) -> a)
-    -> PipePath
-    -> PipePath
-    -> a
-onCiPipePath = (`on` toCI)
-  where
-    toCI = \case
-        LocalPipe (PipeName n) -> (Nothing, CI.mk n)
-        RemotePipe srv (PipeName n) -> (Just $ CI.mk srv, CI.mk n)
-{-# INLINE onCiPipePath #-}
+pipePathToCi :: PipePath -> (Maybe (CI String), CI String)
+pipePathToCi (LocalPipe (PipeName n)) = (Nothing, CI.mk n)
+pipePathToCi (RemotePipe srv (PipeName n)) = (Just $ CI.mk srv, CI.mk n)
+{-# INLINE pipePathToCi #-}
 
 instance Show PipePath where
     showsPrec _ = showString . pipePathToFilePath
 
 -- | Equality is case-insensitive.
 instance Eq PipePath where
-    (==) = onCiPipePath (==)
+    (==) = (==) `on` pipePathToCi
 
 -- | Ordering is case-insensitive.
 instance Ord PipePath where
-    compare = onCiPipePath compare
+    compare = compare `on` pipePathToCi
 
 -- | Convert 'PipePath' to a valid Windows 'FilePath' referencing a Named Pipe.
 -- Such paths are in form:
