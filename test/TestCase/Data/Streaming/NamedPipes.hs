@@ -25,7 +25,7 @@ import Control.Concurrent (myThreadId, threadDelay, throwTo)
 import Control.Concurrent.MVar (newEmptyMVar, tryPutMVar, takeMVar)
 import Control.Exception (catch)
 import Control.Monad ((>>=), replicateM_, void)
-import Data.Function (($), (.), const)
+import Data.Function (($), (.), const, id)
 import Data.Functor ((<$))
 import Data.Int (Int)
 import Data.List (replicate)
@@ -46,6 +46,8 @@ import Test.HUnit.Lang (HUnitFailure)
 import System.Win32.NamedPipes (PipeName, PipePath(LocalPipe))
 import Data.Streaming.NamedPipes
     ( AppDataPipe
+    , ClientSettingsPipe
+    , ServerSettingsPipe
     , appRead
     , appWrite
     , clientSettingsPipe
@@ -66,16 +68,19 @@ tests =
     ]
 
 withServer
-    :: (AppDataPipe -> IO ())
+    :: ((ServerSettingsPipe, ClientSettingsPipe)
+        -> (ServerSettingsPipe, ClientSettingsPipe))
+    -> (AppDataPipe -> IO ())
     -> (((AppDataPipe -> IO a) -> IO a) -> IO ())
     -> IO ()
-withServer serverApp k = do
+withServer conf serverApp k = do
     name <- genPipeName
 
     (signalReady, waitReady) <- newWait
-    let serverSettings = setAfterBindPipe signalReady $
-            serverSettingsPipe name
-    let clientSettings = clientSettingsPipe (LocalPipe name)
+    let (serverSettings, clientSettings) = conf
+            ( setAfterBindPipe signalReady $ serverSettingsPipe name
+            , clientSettingsPipe (LocalPipe name)
+            )
 
     server <- async $ do
         thread <- myThreadId
@@ -94,10 +99,10 @@ withServer serverApp k = do
 
 testConnectDisconnect :: Assertion
 testConnectDisconnect =
-    withServer (const $ pure ()) ($ const $ pure ())
+    withServer id (const $ pure ()) ($ const $ pure ())
 
 testServerPing :: Assertion
-testServerPing = withServer server ($ client)
+testServerPing = withServer id server ($ client)
   where
     server appData = do
         appWrite appData "ping"
@@ -109,7 +114,7 @@ testServerPing = withServer server ($ client)
         appRead appData >>= \m -> m @?= "end"
 
 testClientPing :: Assertion
-testClientPing = withServer server ($ client)
+testClientPing = withServer id server ($ client)
   where
     server appData = do
         appRead appData >>= \m -> m @?= "ping"
@@ -119,14 +124,14 @@ testClientPing = withServer server ($ client)
         appRead appData >>= \m -> m @?= "pong"
 
 testConsecutiveClients :: Assertion
-testConsecutiveClients = withServer server $ \runClient ->
+testConsecutiveClients = withServer id server $ \runClient ->
     replicateM_ numClients (runClient client)
   where
     server _ = pure ()
     client _ = pure ()
 
 testConcurrentClients :: Assertion
-testConcurrentClients = withServer server $ \runClient ->
+testConcurrentClients = withServer id server $ \runClient ->
     void . mapConcurrently runClient $ replicate numClients client
   where
     server _ = pure ()
