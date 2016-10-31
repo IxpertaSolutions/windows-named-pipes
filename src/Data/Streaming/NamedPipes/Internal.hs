@@ -19,10 +19,13 @@ module Data.Streaming.NamedPipes.Internal
     -- * ServerSettingsPipe
     , AfterBindPipe
     , HasAfterBindPipe(..)
+    , HasPipeMode(..)
     , HasPipeName(..)
     , getAfterBindPipe
+    , getPipeMode
     , getPipeName
     , setAfterBindPipe
+    , setPipeMode
     , setPipeName
     , ServerSettingsPipe(..)
     , serverSettingsPipe
@@ -127,6 +130,20 @@ getAfterBindPipe = getConst . afterBindPipeLens Const
 setAfterBindPipe :: HasAfterBindPipe s => AfterBindPipe -> s -> s
 setAfterBindPipe n = runIdentity . afterBindPipeLens (const (Identity n))
 
+-- | Type class for accessing 'PipeMode' in a data type (usually a type that
+-- represents server settings).
+class HasPipeMode s where
+    -- | Lens for accessing pipe mode in a data type (usually server setings).
+    pipeModeLens :: Functor f => (PipeMode -> f PipeMode) -> s -> f s
+
+-- | Get pipe mode from server settings.
+getPipeMode :: HasPipeMode s => s -> PipeMode
+getPipeMode = getConst . pipeModeLens Const
+
+-- | Set pipe mode from server settings.
+setPipeMode :: HasPipeMode s => PipeMode -> s -> s
+setPipeMode n = runIdentity . pipeModeLens (const (Identity n))
+
 -- | Type class for accessing 'PipeName' in a data type (usually a type that
 -- represents server settings).
 class HasPipeName s where
@@ -153,6 +170,10 @@ data ServerSettingsPipe = ServerSettingsPipe
 instance HasAfterBindPipe ServerSettingsPipe where
     afterBindPipeLens f s@ServerSettingsPipe{serverAfterBindPipe = a} =
         f a <$$> \b -> s{serverAfterBindPipe = b}
+
+instance HasPipeMode ServerSettingsPipe where
+    pipeModeLens f s@ServerSettingsPipe{serverPipeMode = a} =
+        f a <$$> \b -> s{serverPipeMode = b}
 
 instance HasPipeName ServerSettingsPipe where
     pipeNameLens f s@ServerSettingsPipe{serverPipeName = a} =
