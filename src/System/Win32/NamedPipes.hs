@@ -41,7 +41,7 @@ import Prelude (error, fromIntegral)
 import Control.Monad (return, unless, void)
 import Data.Bits ((.|.))
 import Data.Bool (Bool, otherwise)
-import Data.Eq (Eq((==)))
+import Data.Eq (Eq((==), (/=)))
 import Data.Function (($), (.), on)
 import Data.Functor (fmap)
 import Data.Int (Int)
@@ -347,7 +347,7 @@ writePipe h bs = ByteString.unsafeUseAsCStringLen bs $ void . writePipe'
     --
     -- See MSDN documentation on details about Win32 WriteFile function:
     -- https://msdn.microsoft.com/en-us/library/windows/desktop/aa365747(v=vs.85).aspx
-    writePipe' (ptr, len) = failIf (== 0) "writePipe"
+    writePipe' (ptr, len) = failIf (/= fromIntegral len) "writePipe"
         $ win32_WriteFile h ptr (fromIntegral len) overlapped
 
     -- Not using overlapped (asynchronous) I/O.
