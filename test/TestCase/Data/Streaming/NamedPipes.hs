@@ -21,6 +21,7 @@ module TestCase.Data.Streaming.NamedPipes (tests)
   where
 
 import Control.Applicative ((*>), pure)
+import Control.Arrow (first)
 import Control.Concurrent (myThreadId, threadDelay, throwTo)
 import Control.Concurrent.MVar (newEmptyMVar, tryPutMVar, takeMVar)
 import Control.Exception (catch)
@@ -43,7 +44,11 @@ import Test.Framework.Providers.HUnit (testCase)
 import Test.HUnit (Assertion, (@?=), assertFailure)
 import Test.HUnit.Lang (HUnitFailure)
 
-import System.Win32.NamedPipes (PipeName, PipePath(LocalPipe))
+import System.Win32.NamedPipes
+    ( PipeMode(MessageMode, StreamMode)
+    , PipeName
+    , PipePath(LocalPipe)
+    )
 import Data.Streaming.NamedPipes
     ( AppDataPipe
     , ClientSettingsPipe
@@ -55,6 +60,7 @@ import Data.Streaming.NamedPipes
     , runPipeServer
     , serverSettingsPipe
     , setAfterBindPipe
+    , setPipeMode
     )
 
 
@@ -65,6 +71,8 @@ tests =
     , testCase "Client pings, server waits" testClientPing
     , testCase "Multiple empty clients (consecutive)" testConsecutiveClients
     , testCase "Multiple empty clients (concurrent)" testConcurrentClients
+    , testCase "Message mode" testMessageMode
+    , testCase "Stream mode" testStreamMode
     ]
 
 -- | Run a server-clients interaction. HUnit assertions may be used in both
@@ -78,10 +86,9 @@ withServer
     -> IO ()
 withServer conf serverApp k = do
     name <- genPipeName
-
     (signalReady, waitReady) <- newWait
     let (serverSettings, clientSettings) = conf
-            ( setAfterBindPipe signalReady $ serverSettingsPipe name
+            ( setAfterBindPipe (const signalReady) $ serverSettingsPipe name
             , clientSettingsPipe (LocalPipe name)
             )
 
@@ -94,11 +101,18 @@ withServer conf serverApp k = do
 
     () <$ waitAnyCancel [server, clients, timeOut]
   where
-    newWait = do
-        ready <- newEmptyMVar
-        let signalReady _ = void $ tryPutMVar ready ()
-        let waitReady = takeMVar ready
-        pure (signalReady, waitReady)
+    genPipeName :: IO PipeName
+    genPipeName = do
+        processId <- getProcessId iNVALID_HANDLE_VALUE
+        threadId <- myThreadId
+        pure . fromString $ show processId <> "-" <> show threadId
+
+newWait :: IO (IO (), IO ())
+newWait = do
+    ready <- newEmptyMVar
+    let signalReady = void $ tryPutMVar ready ()
+    let waitReady = takeMVar ready
+    pure (signalReady, waitReady)
 
 -- | Simple test with a single client and no data being sent either way.
 testConnectDisconnect :: Assertion
@@ -152,8 +166,34 @@ testConcurrentClients = withServer id server $ \runClient ->
 numClients :: Int
 numClients = 10
 
-genPipeName :: IO PipeName
-genPipeName = do
-    processId <- getProcessId iNVALID_HANDLE_VALUE
-    threadId <- myThreadId
-    pure . fromString $ show processId <> "-" <> show threadId
+-- | Test that 'MessageMode' works as expected, not joining two messages
+-- together as one might expect in a stream mode.
+testMessageMode :: Assertion
+testMessageMode = withServer conf server ($ client)
+  where
+    conf = first $ setPipeMode MessageMode
+    server appData = do
+        appRead appData >>= \m -> m @?= "ping1"
+        appRead appData >>= \m -> m @?= "ping2"
+        appWrite appData "end"
+    client appData = do
+        appWrite appData "ping1"
+        appWrite appData "ping2"
+        appRead appData >>= \m -> m @?= "end"
+
+-- | Test that 'StreamMode' works as expected, joining messages together if
+-- a read occurs after multiple writes.
+testStreamMode :: Assertion
+testStreamMode = do
+    (signal, wait) <- newWait
+    let conf = first $ setPipeMode StreamMode
+    let server appData = do
+            wait
+            appRead appData >>= \m -> m @?= "ping1ping2"
+            appWrite appData "end"
+    let client appData = do
+            appWrite appData "ping1"
+            appWrite appData "ping2"
+            signal
+            appRead appData >>= \m -> m @?= "end"
+    withServer conf server ($ client)
