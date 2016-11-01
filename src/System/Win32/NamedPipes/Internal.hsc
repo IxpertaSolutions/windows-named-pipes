@@ -512,8 +512,8 @@ waitNamedPipe
     -- ^ 'Data.Bool.True' if no instance of the pipe is available.
 waitNamedPipe name timeOut =
     withTString name $ \n ->
-        failUnlessTrueOr #{const ERROR_SEM_TIMEOUT} errMsg $
-            c_WaitNamedPipe n timeOut
+        failUnlessTrueOr #{const ERROR_SEM_TIMEOUT} errMsg
+            $ c_WaitNamedPipe n timeOut
   where
     errMsg = "WaitNamedPipe " <> show name
 
@@ -549,10 +549,10 @@ foreign import WINDOWS_CCONV interruptible "windows.h WaitNamedPipeW"
 -- Reads data from the specified file or input/output (I/O) device. Reads occur
 -- at the position specified by the file pointer if supported by the device.
 readFile :: HANDLE -> Ptr a -> DWORD -> Maybe LPOVERLAPPED -> IO DWORD
-readFile h buf n mb_over =
-  alloca $ \ p_n -> do
-  failIfFalse_ "ReadFile" $ c_ReadFile h buf n p_n (maybePtr mb_over)
-  peek p_n
+readFile h buf n mbOver =
+    alloca $ \r -> do
+        failIfFalse_ "ReadFile" $ c_ReadFile h buf n r (maybePtr mbOver)
+        peek r
 
 -- | Interruptible version of 'System.Win32.File.c_ReadFile'.
 --
@@ -571,16 +571,22 @@ readFile h buf n mb_over =
 -- );
 -- @
 foreign import WINDOWS_CCONV interruptible "windows.h ReadFile"
-  c_ReadFile :: HANDLE -> Ptr a -> DWORD -> Ptr DWORD -> LPOVERLAPPED -> IO Bool
+    c_ReadFile
+        :: HANDLE
+        -> Ptr a
+        -> DWORD
+        -> Ptr DWORD
+        -> LPOVERLAPPED
+        -> IO Bool
 
 -- | Interruptible version of 'System.Win32.File.c_WriteFile'.
 --
 -- Writes data to the specified file or input/output (I/O) device.
 writeFile :: HANDLE -> Ptr a -> DWORD -> Maybe LPOVERLAPPED -> IO DWORD
-writeFile h buf n mb_over =
-  alloca $ \ p_n -> do
-  failIfFalse_ "WriteFile" $ c_WriteFile h buf n p_n (maybePtr mb_over)
-  peek p_n
+writeFile h buf n mbOver =
+    alloca $ \r -> do
+        failIfFalse_ "WriteFile" $ c_WriteFile h buf n r (maybePtr mbOver)
+        peek r
 
 -- | Interruptible version of 'System.Win32.File.c_WriteFile'.
 --
@@ -598,7 +604,13 @@ writeFile h buf n mb_over =
 -- );
 -- @
 foreign import WINDOWS_CCONV interruptible "windows.h WriteFile"
-  c_WriteFile :: HANDLE -> Ptr a -> DWORD -> Ptr DWORD -> LPOVERLAPPED -> IO Bool
+    c_WriteFile
+        :: HANDLE
+        -> Ptr a
+        -> DWORD
+        -> Ptr DWORD
+        -> LPOVERLAPPED
+        -> IO Bool
 
 -- }}} readFile, writeFile ----------------------------------------------------
 
