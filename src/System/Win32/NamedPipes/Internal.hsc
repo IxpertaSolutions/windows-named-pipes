@@ -15,6 +15,26 @@
 -- Bindings to Named Pipes Win32 API.
 module System.Win32.NamedPipes.Internal
     (
+    -- * Conventions
+    --
+    -- | Naming convention is based on
+    -- <https://hackage.haskell.org/package/Win32 Win32> library.
+    --
+    -- Very often Win API functions return non-zero values to indicate success,
+    -- and zero value to propagate a failure.These values are usually
+    -- interpreted as boolean (in haskell 'Bool'), therefore, non-zero value is
+    -- 'Data.Bool.True' (success), and the zero value is 'Data.Bool.Folse'
+    -- (failure).
+    --
+    -- Function 'getLastError' can be used to retrieve details when failure is
+    -- returned by a Win API call. In higher-level Haskell bindings this is
+    -- transformed in to @IOException@. Please, be cereful when using
+    -- 'getLastError' for these functions, since they may not preserve the
+    -- 'ErrCode' value.
+    --
+    -- Please, bear the above in mind when trying to understand the code, and
+    -- the naming convention used here, and in Win32 library.
+
     -- * Win32 Style Wrappers
       createNamedPipe
     , connectNamedPipe
@@ -294,10 +314,10 @@ createNamedPipe
     -- ^ The unique pipe name. This string must have the following form:
     --
     -- @
-    -- \\\\.\\pipe\\pipename
+    -- \\\\.\\pipe\\%PipeName%
     -- @
     --
-    -- The pipename part of the name can include any character other than a
+    -- The @%PipeName%@ part of the name can include any character other than a
     -- backslash, including numbers and special characters. The entire pipe
     -- name string can be up to 256 characters long. Pipe names are not case
     -- sensitive.
@@ -390,10 +410,9 @@ foreign import WINDOWS_CCONV unsafe "windows.h CreateNamedPipeW"
 -- connect to an instance of a named pipe. A client process connects by calling
 -- the 'System.Win32.File.createFile' function.
 --
--- Function returns 'Data.Bool.True' if the pipe is successfully connected to
--- a client, and 'Data.Bool.False' otherwise.
--- (Do note that this logic differs slightly from the @ConnectNamedPipe@
--- WINAPI function.)
+-- Function returns 'Data.Bool.True' if the pipe is successfully connected to a
+-- client, and 'Data.Bool.False' otherwise. (Do note that this logic differs
+-- slightly from the @ConnectNamedPipe@ Win API function.)
 connectNamedPipe :: HANDLE -> IO Bool
 connectNamedPipe h =
     successOrCheckIfAlreadyConnected $ c_ConnectNamedPipe h nullPtr
@@ -465,12 +484,12 @@ foreign import WINDOWS_CCONV safe "windows.h DisconnectNamedPipe"
 -- {{{ waitNamedPipe ----------------------------------------------------------
 
 -- | Waits until either a time-out interval elapses or an instance of the
--- specified named pipe is available for connection (that is, the pipe's
--- server process has a pending ConnectNamedPipe operation on the pipe).
+-- specified named pipe is available for connection (that is, the pipe's server
+-- process has a pending @ConnectNamedPipe@ operation on the pipe).
 --
 -- Function returns 'Data.Bool.False' if an instance of the pipe is available
--- before the time-out interval elapses, and 'Data.Bool.True' otherwise.
--- (Do note that this logic differs from the @WaitNamedPipe@ WINAPI function.)
+-- before the time-out interval elapses, and 'Data.Bool.True' otherwise. (Do
+-- note that this logic differs from the @WaitNamedPipe@ Win API function.)
 --
 -- If no instances of the specified named pipe exist, the function returns
 -- immediately, regardless of the time-out value.
@@ -478,11 +497,11 @@ waitNamedPipe
     :: FilePath
     -- ^ The name of the named pipe. The string must include the name of the
     -- computer on which the server process is executing. A period may be used
-    -- for the servername if the pipe is local. The following pipe name format
-    -- is used:
+    -- as the value of @%ServerName%@ part, if the pipe is local. The following
+    -- pipe name format is used:
     --
     -- @
-    -- \\\\servername\\pipe\\pipename
+    -- \\\\%ServerName%\\pipe\\%PipeName%
     -- @
     -> TimeOut
     -- ^ The number of milliseconds that the function will wait for an
@@ -525,7 +544,10 @@ foreign import WINDOWS_CCONV interruptible "windows.h WaitNamedPipeW"
 
 -- {{{ readFile, writeFile ----------------------------------------------------
 
--- | Interruptible version of 'System.Win32.File.win32_ReadFile'.
+-- | Interruptible version of 'System.Win32.File.c_ReadFile'.
+--
+-- Reads data from the specified file or input/output (I/O) device. Reads occur
+-- at the position specified by the file pointer if supported by the device.
 readFile :: HANDLE -> Ptr a -> DWORD -> Maybe LPOVERLAPPED -> IO DWORD
 readFile h buf n mb_over =
   alloca $ \ p_n -> do
@@ -533,10 +555,27 @@ readFile h buf n mb_over =
   peek p_n
 
 -- | Interruptible version of 'System.Win32.File.c_ReadFile'.
+--
+-- Reads data from the specified file or input/output (I/O) device. Reads occur
+-- at the position specified by the file pointer if supported by the device.
+--
+-- <https://msdn.microsoft.com/en-us/library/windows/desktop/aa365467(v=vs.85).aspx MSDN: ReadFile function>
+--
+-- @
+-- BOOL WINAPI ReadFile(
+--     _In_        HANDLE       hFile,
+--     _Out_       LPVOID       lpBuffer,
+--     _In_        DWORD        nNumberOfBytesToRead,
+--     _Out_opt_   LPDWORD      lpNumberOfBytesRead,
+--     _Inout_opt_ LPOVERLAPPED lpOverlapped
+-- );
+-- @
 foreign import WINDOWS_CCONV interruptible "windows.h ReadFile"
   c_ReadFile :: HANDLE -> Ptr a -> DWORD -> Ptr DWORD -> LPOVERLAPPED -> IO Bool
 
--- | Interruptible version of 'System.Win32.File.win32_WriteFile'.
+-- | Interruptible version of 'System.Win32.File.c_WriteFile'.
+--
+-- Writes data to the specified file or input/output (I/O) device.
 writeFile :: HANDLE -> Ptr a -> DWORD -> Maybe LPOVERLAPPED -> IO DWORD
 writeFile h buf n mb_over =
   alloca $ \ p_n -> do
@@ -544,6 +583,20 @@ writeFile h buf n mb_over =
   peek p_n
 
 -- | Interruptible version of 'System.Win32.File.c_WriteFile'.
+--
+-- Writes data to the specified file or input/output (I/O) device.
+--
+-- <https://msdn.microsoft.com/en-us/library/windows/desktop/aa365747(v=vs.85).aspx MSDN: WriteFile function>
+--
+-- @
+-- BOOL WINAPI WriteFile(
+--     _In_        HANDLE       hFile,
+--     _In_        LPCVOID      lpBuffer,
+--     _In_        DWORD        nNumberOfBytesToWrite,
+--     _Out_opt_   LPDWORD      lpNumberOfBytesWritten,
+--     _Inout_opt_ LPOVERLAPPED lpOverlapped
+-- );
+-- @
 foreign import WINDOWS_CCONV interruptible "windows.h WriteFile"
   c_WriteFile :: HANDLE -> Ptr a -> DWORD -> Ptr DWORD -> LPOVERLAPPED -> IO Bool
 
@@ -593,6 +646,11 @@ failUnlessTrueOr err fnName f =
 
 -- | Catch and handle @ERROR_PIPE_BUSY@ errors. Useful for wrapping
 -- 'System.Win32.File.createFile' calls.
+--
+-- Function relies on 'getLastError' to return the same 'ErrCode' that caused
+-- the exception. For that reason it has to be used immediately around the call
+-- that raises the exception. Making any other Win API call could erase the
+-- cause of an exception.
 catchPipeBusy :: IO a -> (IOError -> IO a) -> IO a
 catchPipeBusy action handler = action `catchIOError` handler'
   where
