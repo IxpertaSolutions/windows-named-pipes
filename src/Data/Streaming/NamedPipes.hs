@@ -125,11 +125,11 @@ runPipeServer cfg@ServerSettingsPipe{..} app = do
         -- It is important to close pipe only when exception is detected,
         -- otherwise we would close an active handle.
         --
-        -- On this level we can use plain closePipe without disconnectPipe.
-        -- If we have detected that client is connected then we are
-        -- necessarily inside connection handling thread (see "serve"
-        -- function).
-        (`onException` closePipe pipe) $ do
+        -- On this level we can use plain closePipe (in onExceptionClose)
+        -- without disconnectPipe. If we have detected that client is connected
+        -- then we are necessarily inside connection handling thread (see
+        -- "serve" function).
+        (`onExceptionClose` pipe) $ do
             haveClient <- connectPipe pipe
 
             -- We must create (bind) a new pipe instance before we fork the
@@ -138,9 +138,16 @@ runPipeServer cfg@ServerSettingsPipe{..} app = do
             -- would cease to exist for a short moment, confusing clients.
             pipe' <- bindPipe'
 
-            (`onException` closePipe pipe') $ do
-                when haveClient $ serve pipe
-                pure pipe'
+            -- Note, that when we are closing pipe', here, we expect that it
+            -- had no chance of being used, therefore, it is safe to use
+            -- closePipe (inside onExceptionClose) without involving
+            -- disconnectPipe.
+            when haveClient
+                $ serve pipe `onExceptionClose` pipe'
+
+            pure pipe'
+      where
+        onExceptionClose f p = f `onException` closePipe p
 
     -- We are assuming that it is optimal to use same size of input/output
     -- buffer as the read size when calling readPipe.
