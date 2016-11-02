@@ -237,7 +237,7 @@ testLongStreams = withServer conf server ($ client)
     gen n = Just (n `mod` prime, succ n `mod` prime)
 
     long1 = fst $ BS.unfoldrN (2 * defaultReadBufferSize) gen 0
-        -- Explicitly longer then defaultReadBufferSize.
+        -- Explicitly longer than defaultReadBufferSize.
 
     long2 = fst $ BS.unfoldrN (16 * defaultReadBufferSize) gen 0
         -- Quite long indeed.
