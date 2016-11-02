@@ -175,8 +175,9 @@ pipePath srv = RemotePipe srv
 -- | Utility function that simplifies implementation of 'Eq', and 'Ord'
 -- instances.
 pipePathToCi :: PipePath -> (Maybe (CI String), CI String)
-pipePathToCi (LocalPipe (PipeName n)) = (Nothing, CI.mk n)
-pipePathToCi (RemotePipe srv (PipeName n)) = (Just $ CI.mk srv, CI.mk n)
+pipePathToCi = \case
+    LocalPipe (PipeName n) -> (Nothing, CI.mk n)
+    RemotePipe srv (PipeName n) -> (Just $ CI.mk srv, CI.mk n)
 {-# INLINE pipePathToCi #-}
 
 instance Show PipePath where
