@@ -22,7 +22,7 @@ module TestCase.Data.Streaming.NamedPipes (tests)
 
 import Prelude (mod, succ)
 
-import Control.Applicative ((*>), (<$>), pure)
+import Control.Applicative ((*>), pure)
 import Control.Arrow (first)
 import Control.Concurrent (myThreadId, threadDelay, throwTo)
 import Control.Concurrent.MVar (newEmptyMVar, tryPutMVar, takeMVar)
@@ -30,7 +30,7 @@ import Control.Exception (catch)
 import Control.Monad ((>>=), replicateM_, void)
 import Data.Bool (otherwise)
 import Data.Function (($), (.), const, id)
-import Data.Functor ((<$))
+import Data.Functor ((<$), (<$>))
 import Data.Int (Int)
 import Data.List (replicate)
 import Data.Maybe (Maybe(Just))
@@ -133,23 +133,23 @@ testServerPing = withServer id server ($ client)
   where
     server appData = do
         appWrite appData "ping"
-        appRead appData >>= \m -> m @?= "pong"
+        appRead appData >>= (@?= "pong")
         appWrite appData "end"
     client appData = do
-        appRead appData >>= \m -> m @?= "ping"
+        appRead appData >>= (@?= "ping")
         appWrite appData "pong"
-        appRead appData >>= \m -> m @?= "end"
+        appRead appData >>= (@?= "end")
 
 -- | Test that a client may start sending data first.
 testClientPing :: Assertion
 testClientPing = withServer id server ($ client)
   where
     server appData = do
-        appRead appData >>= \m -> m @?= "ping"
+        appRead appData >>= (@?= "ping")
         appWrite appData "pong"
     client appData = do
         appWrite appData "ping"
-        appRead appData >>= \m -> m @?= "pong"
+        appRead appData >>= (@?= "pong")
 
 -- | Test that multiple clients can connect one after the other. Both server
 -- and clients end immediately, increasing the likelihood of race conditions
@@ -181,13 +181,13 @@ testMessageMode = withServer conf server ($ client)
   where
     conf = first $ setPipeMode MessageMode
     server appData = do
-        appRead appData >>= \m -> m @?= "ping1"
-        appRead appData >>= \m -> m @?= "ping2"
+        appRead appData >>= (@?= "ping1")
+        appRead appData >>= (@?= "ping2")
         appWrite appData "end"
     client appData = do
         appWrite appData "ping1"
         appWrite appData "ping2"
-        appRead appData >>= \m -> m @?= "end"
+        appRead appData >>= (@?= "end")
 
 -- | Test that 'StreamMode' works as expected, joining messages together if
 -- a read occurs after multiple writes.
@@ -197,13 +197,13 @@ testStreamMode = do
     let conf = first $ setPipeMode StreamMode
     let server appData = do
             wait
-            appRead appData >>= \m -> m @?= "ping1ping2"
+            appRead appData >>= (@?= "ping1ping2")
             appWrite appData "end"
     let client appData = do
             appWrite appData "ping1"
             appWrite appData "ping2"
             signal
-            appRead appData >>= \m -> m @?= "end"
+            appRead appData >>= (@?= "end")
     withServer conf server ($ client)
 
 -- | Test sending larger (than buffer size) amounts of data through pipes.
@@ -215,15 +215,15 @@ testLongStreams = withServer conf server ($ client)
   where
     conf = first $ setPipeMode StreamMode
     server appData = do
-        appReadN appData (BS.length long1) >>= \m -> m @?= long1
+        appReadN appData (BS.length long1) >>= (@?= long1)
         appWrite appData "ack1"
-        appReadN appData (BS.length long2) >>= \m -> m @?= long2
+        appReadN appData (BS.length long2) >>= (@?= long2)
         appWrite appData "ack2"
     client appData = do
         appWrite appData long1
-        appRead appData >>= \m -> m @?= "ack1"
+        appRead appData >>= (@?= "ack1")
         appWrite appData long2
-        appRead appData >>= \m -> m @?= "ack2"
+        appRead appData >>= (@?= "ack2")
 
     appReadN appData n = go ""
       where
