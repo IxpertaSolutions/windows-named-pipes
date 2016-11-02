@@ -109,8 +109,8 @@ pipeName str
   | isValid = Just $ PipeName str
   | otherwise = Nothing
   where
-    -- MSDN documentation specifies that backslash is the only character in
-    -- pipe name.
+    -- MSDN documentation specifies that backslash is the only character that
+    -- is invalid in pipe name.
     isValid = '\\' `List.notElem` str
 
 -- | Utility function that simplifies implementation of 'Eq', and 'Ord'

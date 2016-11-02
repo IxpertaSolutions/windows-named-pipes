@@ -21,9 +21,9 @@ module System.Win32.NamedPipes.Internal
     -- <https://hackage.haskell.org/package/Win32 Win32> library.
     --
     -- Very often Win API functions return non-zero values to indicate success,
-    -- and zero value to propagate a failure.These values are usually
-    -- interpreted as boolean (in haskell 'Bool'), therefore, non-zero value is
-    -- 'Data.Bool.True' (success), and the zero value is 'Data.Bool.Folse'
+    -- and zero value to propagate a failure. These values are usually
+    -- interpreted as boolean (in Haskell 'Bool'), therefore, non-zero value is
+    -- 'Data.Bool.True' (success), and the zero value is 'Data.Bool.False'
     -- (failure).
     --
     -- Function 'getLastError' can be used to retrieve details when failure is
