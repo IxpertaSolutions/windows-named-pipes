@@ -55,6 +55,7 @@ import System.Win32.NamedPipes
     ( PipeMode(MessageMode, StreamMode)
     , PipeName
     , PipePath(LocalPipe)
+    , defaultReadBufferSize
     )
 import Data.Streaming.NamedPipes
     ( AppDataPipe
@@ -231,8 +232,12 @@ testLongStreams = withServer conf server ($ client)
           | BS.length readSoFar >= n = pure readSoFar
           | otherwise = (readSoFar <>) <$> appRead appData >>= go
 
-    -- don't cycle when read in chunks
+    -- Don't cycle when reading in chunks.
     prime = 251
     gen n = Just (n `mod` prime, succ n `mod` prime)
-    long1 = fst $ BS.unfoldrN 65536 gen 0 -- larger than defaultReadBufferSize
-    long2 = fst $ BS.unfoldrN 1048576 gen 0 -- quite long indeed
+
+    long1 = fst $ BS.unfoldrN (2 * defaultReadBufferSize) gen 0
+        -- Explicitly longer then defaultReadBufferSize.
+
+    long2 = fst $ BS.unfoldrN (16 * defaultReadBufferSize) gen 0
+        -- Quite long indeed.
