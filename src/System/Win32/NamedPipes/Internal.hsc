@@ -544,10 +544,11 @@ foreign import WINDOWS_CCONV interruptible "windows.h WaitNamedPipeW"
 
 -- {{{ readFile, writeFile ----------------------------------------------------
 
--- | Interruptible version of 'System.Win32.File.c_ReadFile'.
+-- | Interruptible version of 'System.Win32.File.win32_ReadFile'.
 --
--- Reads data from the specified file or input/output (I/O) device. Reads occur
--- at the position specified by the file pointer if supported by the device.
+-- Reads data from the specified file or input\/output (I\/O) device. Reads
+-- occur at the position specified by the file pointer if supported by the
+-- device.
 readFile :: HANDLE -> Ptr a -> DWORD -> Maybe LPOVERLAPPED -> IO DWORD
 readFile h buf n mbOver =
     alloca $ \r -> do
@@ -556,8 +557,9 @@ readFile h buf n mbOver =
 
 -- | Interruptible version of 'System.Win32.File.c_ReadFile'.
 --
--- Reads data from the specified file or input/output (I/O) device. Reads occur
--- at the position specified by the file pointer if supported by the device.
+-- Reads data from the specified file or input\/output (I\/O) device. Reads
+-- occur at the position specified by the file pointer if supported by the
+-- device.
 --
 -- <https://msdn.microsoft.com/en-us/library/windows/desktop/aa365467(v=vs.85).aspx MSDN: ReadFile function>
 --
@@ -579,9 +581,9 @@ foreign import WINDOWS_CCONV interruptible "windows.h ReadFile"
         -> LPOVERLAPPED
         -> IO Bool
 
--- | Interruptible version of 'System.Win32.File.c_WriteFile'.
+-- | Interruptible version of 'System.Win32.File.win32_WriteFile'.
 --
--- Writes data to the specified file or input/output (I/O) device.
+-- Writes data to the specified file or input\/output (I\/O) device.
 writeFile :: HANDLE -> Ptr a -> DWORD -> Maybe LPOVERLAPPED -> IO DWORD
 writeFile h buf n mbOver =
     alloca $ \r -> do
@@ -590,7 +592,7 @@ writeFile h buf n mbOver =
 
 -- | Interruptible version of 'System.Win32.File.c_WriteFile'.
 --
--- Writes data to the specified file or input/output (I/O) device.
+-- Writes data to the specified file or input\/output (I\/O) device.
 --
 -- <https://msdn.microsoft.com/en-us/library/windows/desktop/aa365747(v=vs.85).aspx MSDN: WriteFile function>
 --
