@@ -294,6 +294,8 @@ getPipe path = tryOpenLoop
 -- Function returns 'Data.Bool.False' when operation was successful, and
 -- 'Data.Bool.True' when @ERROR_INVALID_HANDLE@ was returned by underlying
 -- low-level call. This function enables us to ignore already closed handles.
+--
+-- See also 'disconnectNamedPipe'.
 closePipe :: PipeHandle -> IO Bool
 closePipe = closeHandleCheckInvalidHandle
 {-# INLINE closePipe #-}
@@ -307,6 +309,8 @@ closePipe = closeHandleCheckInvalidHandle
 -- Function returns 'Data.Bool.False' when operation was successful, and
 -- 'Data.Bool.True' when @ERROR_INVALID_HANDLE@ was returned by underlying
 -- low-level call. This function enables us to ignore already closed handles.
+--
+-- See also 'closePipe'.
 disconnectPipe :: PipeHandle -> IO Bool
 disconnectPipe pipe = do
     isInvalidHandle <- flushFileBuffersCheckInvalidHandle pipe
@@ -346,9 +350,13 @@ readPipe bufSize h =
 writePipe :: PipeHandle -> ByteString -> IO ()
 writePipe h bs = ByteString.unsafeUseAsCStringLen bs $ void . writePipe'
   where
-    -- We are assuming that zero return value is an error, but that may not be
-    -- an error in case of overlapped I/O. We aren't using that, so we have cut
-    -- the corners here.
+    -- Whenever writeFile returns value different from data size, we treat it
+    -- as an error. This is assumed due to the fact that we aren't using
+    -- overlapped (i.e. asynchronous) I/O.
+    --
+    -- Zero return value is potentionaly a special case, based on code examples
+    -- available on internet, but that is covered by the same condition, and it
+    -- is not handled explicitly.
     --
     -- See MSDN documentation on details about Win32 WriteFile function:
     -- https://msdn.microsoft.com/en-us/library/windows/desktop/aa365747(v=vs.85).aspx
