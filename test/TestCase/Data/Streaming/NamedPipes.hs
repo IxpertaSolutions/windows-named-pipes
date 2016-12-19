@@ -20,7 +20,7 @@
 module TestCase.Data.Streaming.NamedPipes (tests)
   where
 
-import Prelude (mod, succ)
+import Prelude ((*), mod, succ)
 
 import Control.Applicative ((*>), pure)
 import Control.Arrow (first)
@@ -55,7 +55,6 @@ import System.Win32.NamedPipes
     ( PipeMode(MessageMode, StreamMode)
     , PipeName
     , PipePath(LocalPipe)
-    , defaultReadBufferSize
     )
 import Data.Streaming.NamedPipes
     ( AppDataPipe
@@ -64,6 +63,7 @@ import Data.Streaming.NamedPipes
     , appRead
     , appWrite
     , clientSettingsPipe
+    , defaultReadBufferSize
     , runPipeClient
     , runPipeServer
     , serverSettingsPipe
